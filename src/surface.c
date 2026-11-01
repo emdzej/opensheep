@@ -1,6 +1,7 @@
 #include "surface.h"
 #include "xp.h"
 #include <stdlib.h>
+#include <string.h>
 
 Surface *surface_from_pixels(const uint16_t *src, int w, int h, int xform)
 {
@@ -81,6 +82,55 @@ Surface *surface_load_bmp(const char *path)
     s = surface_from_pixels(px, w, h, XFORM_NONE);
     free(px);
 out:
+    free(f);
+    return s;
+}
+
+Surface *surface_load_tga(const char *path)
+{
+    /* 0x408fb0: the file (0x422b50), decoded to 32 bits (0x422b80), then to rgb565 (0x4232c0). Only the
+       run-length truecolour type (10) at 24 and 32 bits is here: every .tgb on the CD is one. */
+    size_t n = 0;
+    uint8_t *f = file_load(path, &n);
+    if (!f) return NULL;
+    Surface *s = NULL;
+    uint8_t *raw = NULL;
+    uint16_t *px = NULL;
+    if (n < 18 || f[2] != 10 || (f[16] != 24 && f[16] != 32)) goto out;
+    int w = (int16_t)(f[12] | f[13] << 8), h = (int16_t)(f[14] | f[15] << 8), bpp = f[16] / 8;
+    if (w <= 0 || h <= 0) goto out;
+    size_t total = (size_t)w * (size_t)h * (size_t)bpp;
+    raw = calloc(total, 1);
+    px = malloc((size_t)w * (size_t)h * sizeof *px);
+    if (!raw || !px) goto out;
+    /* the packets: (h & 0x7f) + 1 pixels, one repeated when h & 0x80, else as many stored */
+    const uint8_t *p = f + 18 + f[0], *end = f + n;
+    for (size_t o = 0; o < total && p < end;) {
+        int count = (*p & 0x7f) + 1;
+        bool rep = *p++ & 0x80;
+        for (int i = 0; i < count && o < total; i++, o += (size_t)bpp) {
+            /* (the original reads and writes past either buffer on a short or long stream) */
+            if (p + bpp > end) { o = total; break; }
+            memcpy(raw + o, p, (size_t)bpp);
+            if (!rep) p += bpp;
+        }
+        if (rep) p += bpp;
+    }
+    /* the rows bottom up whatever the descriptor says; b, g, r stored */
+    for (int y = 0; y < h; y++) {
+        const uint8_t *row = raw + (size_t)(h - 1 - y) * (size_t)w * (size_t)bpp;
+        for (int x = 0; x < w; x++) {
+            const uint8_t *c = row + (size_t)x * (size_t)bpp;
+            int r = c[2], g = c[1], b = c[0];
+            /* the near-blacks lifted off the colour key */
+            if (r && r < 8 && g && g < 4 && b && b < 8) r = 8, g = 4, b = 8;
+            px[y * w + x] = (uint16_t)((r >> 3) << 11 | (g >> 2) << 5 | b >> 3);
+        }
+    }
+    s = surface_from_pixels(px, w, h, XFORM_NONE);
+out:
+    free(px);
+    free(raw);
     free(f);
     return s;
 }

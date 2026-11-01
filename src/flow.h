@@ -9,9 +9,10 @@
 enum {
     APP_START = 0, APP_LOGOS = 1, APP_INTRO = 2, APP_MENU = 3, APP_LEVEL = 4, APP_NEXT = 6,
     APP_RESULTS = 10, APP_CREDITS = 11, APP_HISCORES = 12, APP_END1 = 13, APP_END2 = 14, APP_END3 = 15,
+    APP_END4 = 16, APP_END5 = 17,
 };
 
-extern int g_app_state, g_app_sub;  /* 0x4a3d8c, 0x4a3d88 */
+extern int g_app_state, g_app_sub;  /* 0x4a1ed0, 0x4a1eb0 */
 extern int g_game_mode;             /* 0x4a1eb4: 0 the game, 1 a level for its best time, 2 training */
 extern int g_next_world, g_next_level;   /* 0x4ae0f8, 0x4a4214: what the menu starts */
 extern int g_4b911c;                /* 0x4b911c */

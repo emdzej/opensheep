@@ -14,6 +14,7 @@
 #include "credits.h"
 #include "player.h"
 #include "sprites.h"
+#include "surface.h"
 #include "world.h"
 #include <stdio.h>
 #include <string.h>
@@ -28,7 +29,11 @@ bool g_quit;
 
 static int key_latch = 1;           /* 0x450608: set when a screen starts, so a key still held is no press */
 static int load_blink;              /* 0x4a3b54 */
+static Surface *load_pic;           /* 0x4b0f48 */
+static uint16_t load_bar[400];      /* 0x4ae104 */
+enum { LOAD_STAGE = 5 };            /* 0x4ae0ac when 0x406cc0 is done */
 static int splash_ticks;            /* 0x4adeb8 */
+static Surface *splash;             /* 0x4b90fc */
 static int saved_world, saved_level;   /* 0x4adefc, 0x4b0b54: the level to go back to after saving */
 
 static int bits4(int v)
@@ -224,6 +229,35 @@ static void results_end(void)
     }
 }
 
+/* 0x409d70(0): the two 200-step gradients of the bar (0x4ae104), between the rgb triples at 0x44b334 */
+static void loading_gradient(void)
+{
+    for (int k = 0; k < 2; k++)
+        for (int i = 0; i < 200; i++) {
+            uint32_t a = 0x44b334 + 12 * (uint32_t)k, b = a + 12;
+            int r = (exe_s32(b) - exe_s32(a)) * i / 200 + exe_s32(a);
+            int g = (exe_s32(b + 4) - exe_s32(a + 4)) * i / 200 + exe_s32(a + 4);
+            int bl = (exe_s32(b + 8) - exe_s32(a + 8)) * i / 200 + exe_s32(a + 8);
+            load_bar[200 * k + i] = (uint16_t)((r & 0xf8) << 8 | (g & 0xfc) << 3 | bl >> 3);
+        }
+}
+
+static void loading_start(void)
+{
+    /* 0x409d70(0): the picture is the level's .tgb */
+    loading_gradient();
+    surface_free(load_pic);
+    load_pic = surface_load_tga(world_level_path(exe_str(0x44a0b0)));
+    if (!load_pic) fprintf(stderr, "Cannot load %s\n", world_level_path(exe_str(0x44a0b0)));
+}
+
+static void loading_end(void)
+{
+    /* 0x409d70(4) */
+    surface_free(load_pic);
+    load_pic = NULL;
+}
+
 static bool level_begin(void)
 {
     /* sub-state 0 of the level states: 0x409d70(0) selects the level, 0x406cc0(1) loads it */
@@ -232,6 +266,7 @@ static bool level_begin(void)
         return false;
     }
     g_hud_style = g_level == 0 ? 0 : g_world != 9 ? 1 : 5;
+    loading_start();
     level_hook(DESC_RELEASE);
     if (!level_load_resources()) return false;
     level_start();
@@ -269,11 +304,57 @@ void flow_new_game(void)
     input_keys_tick();
 }
 
+static void text_centred(int y, const uint16_t *s, uint32_t rgb)
+{
+    font_draw(0x140 - font_width(s, FONT_BIG) / 2, y, s, FONT_BIG, rgb);
+}
+
+static void loading_texts(void)
+{
+    /* 0x409990: the world's and the level's names, then the bonus level's three lines or the target */
+    if (g_world == 0 || g_level == 0) return;
+    uint16_t buf[0x100], fmt[0x20];
+    int id = g_level + g_world * 6;
+    text_centred(0x14, str_get(g_world + 0x59), 0xffffffff);
+    text_centred(0x3c, str_get(exe_s16(0x450bd0 + 2 * (uint32_t)id)), 0xffffffff);
+    if (g_level == 5) {
+        for (int i = 0; i < 3; i++) {
+            wfmt(buf, 0x100, str_get(g_world * 5 + 0x11d + i));
+            text_centred(0x172 + 0x14 * i, buf, 0xffffffff);
+        }
+        return;
+    }
+    level_load_tim(g_world, g_level);
+    if (g_world == 9) return;
+    if (g_difficulty == 0) g_needed = 5, g_time_limit = g_tim_easy;
+    else if (g_difficulty == 1) g_needed = 10, g_time_limit = g_tim_normal;
+    else if (g_difficulty == 2) g_needed = 0x14, g_time_limit = g_tim_hard;
+    wfmt(buf, 0x100, exe_wtext(0x44b808, fmt, 0x20), str_get(0x71), g_needed, str_get(0x72), str_get(0x73),
+         g_time_limit / 0xe10, g_time_limit % 0xe10 / 0x3c);
+    text_centred(0x186, buf, 0xffffffff);
+}
+
 static void loading_draw(Framebuffer *fb)
 {
-    /* 0x409d70(2): the loading picture (TODO: the level's .bmp, 0x408fb0) and "press a key" blinking */
+    /* 0x409d70(2) */
     memset(fb->pixels, 0, (size_t)fb->pitch * fb->h * 2);
     sprite_target(fb);
+    /* 0x409020: the picture over the whole screen, the camera at 0 */
+    if (load_pic)
+        for (int y = 0; y < 0x1e0 && y < load_pic->h; y++)
+            memcpy(fb->pixels + (size_t)y * fb->pitch, load_pic->px + (size_t)y * load_pic->w,
+                   2 * (size_t)(load_pic->w < 0x280 ? load_pic->w : 0x280));
+    g_lv.cam_x = g_lv.cam_y = g_lv.fine_x = g_lv.fine_y = 0;
+    loading_texts();
+    /* the bar's white frame, 404 x 27 at (118, 448) */
+    uint16_t *top = fb->pixels + (size_t)0x1c0 * fb->pitch + 0x76;
+    for (int x = 0; x < 0x194; x++) top[x] = top[x + 0x1b * fb->pitch] = 0xffff;
+    for (int y = 0; y < 0x1b; y++) top[y * fb->pitch] = top[y * fb->pitch + 0x193] = 0xffff;
+    /* 0x409d10: its fill, 4 pixels a percent, the stage's share of the load done (0x44b304). Here the
+       load is over in one frame, at the last stage (5: 100%) */
+    int done = exe_s32(0x44b308 + 8 * LOAD_STAGE) * 0 / 100 + exe_s32(0x44b304 + 8 * LOAD_STAGE);
+    for (int y = 0; y < 0x18; y++)
+        memcpy(fb->pixels + (size_t)(0x1c2 + y) * fb->pitch + 0x78, load_bar, 2 * (size_t)(done * 4));
     if (g_demo != 2 && g_world != 0 && g_level != 0 && !(++load_blink & 0x10)) {
         const uint16_t *s = str_get(0x74);
         int w = font_width(s, FONT_BIG);
@@ -319,6 +400,56 @@ static void leave_level(void)
     level_release();
     anims_free();
     sprite_banks_free_all();
+}
+
+static void splash_frame(Framebuffer *fb)
+{
+    /* App_Frame 0x40a170, states 13 to 17 */
+    int st = g_app_state;
+    if (st >= APP_END3) {
+        input_keys_tick();
+        input_map();
+    }
+    if (g_app_sub == 0) {
+        static const uint32_t pic[] = { 0x44b948, 0x44b928, 0x44b908, 0x44b8dc, 0x44b908 };
+        if (st != APP_END4) leave_level();   /* TODO: the sound and music stop as leave_level's */
+        surface_free(splash);                /* (the original drops the last one) */
+        splash = surface_load_bmp(exe_str(pic[st - APP_END1]));
+        splash_ticks = 600;
+        g_app_sub = 1;
+        return;
+    }
+    if (g_app_sub != 1) return;
+    if (splash) surface_blt_fast(fb, 0, 0, splash, NULL);
+    bool over = splash_ticks-- < 1;
+    if (st >= APP_END3 && !over) over = flow_any_key();
+    if (!over) return;
+    switch (st) {
+    case APP_END1: case APP_END2:
+        g_app_state = st + 1;
+        g_app_sub = 0;
+        break;
+    case APP_END3:
+        g_quit = true;                       /* PostQuitMessage */
+        break;
+    case APP_END4:
+        g_app_state = APP_END5;
+        g_app_sub = 0;
+        break;
+    case APP_END5:
+        g_bypass = 1;
+        g_start_world = 1;
+        g_start_level = 5;
+        g_breed = 0;
+        g_char = 0;
+        g_app_state = APP_START;
+        g_app_sub = 0;
+        break;
+    }
+    if (g_app_state != st) {
+        surface_free(splash);
+        splash = NULL;
+    }
 }
 
 void flow_start(int state)
@@ -372,7 +503,10 @@ bool flow_frame(Framebuffer *fb)
         } else if (g_app_sub == 1) {
             input_keys_tick();
             loading_draw(fb);
-            if (g_demo == 2 || g_world == 0 || g_level == 0 || flow_any_key()) g_app_sub = 2;
+            if (g_demo == 2 || g_world == 0 || g_level == 0 || flow_any_key()) {
+                loading_end();
+                g_app_sub = 2;
+            }
         } else {
             play_tick();
             memset(fb->pixels, 0, (size_t)fb->pitch * fb->h * 2);
@@ -416,10 +550,11 @@ bool flow_frame(Framebuffer *fb)
             }
         }
         break;
-    case APP_END1: case APP_END2: case APP_END3:
-        /* TODO: data\screenbits\EndSplash*.bmp, 600 ticks each */
-        (void)splash_ticks;
-        return false;
+    case APP_END1: case APP_END2: case APP_END3: case APP_END4: case APP_END5:
+        /* data\screenbits\EndSplash*.bmp and Hr3.bmp, 600 ticks each. Nothing sets 13 or 16, and the CD has
+           no screenbits: a leftover */
+        splash_frame(fb);
+        break;
     default:
         go(APP_MENU, 0, 0);
         break;

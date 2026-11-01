@@ -26,6 +26,8 @@ Surface *surface_from_pixels(const uint16_t *src, int w, int h, int xform);
 void surface_free(Surface *s);
 /* A .bmp file (24 or 8 bits) as a surface (0x436be0 / 0x437b20); NULL if it is missing or not a bmp. */
 Surface *surface_load_bmp(const char *path);
+/* A .tgb (a TGA, run-length truecolour) as a surface (0x408fb0); NULL if missing or another kind. */
+Surface *surface_load_tga(const char *path);
 
 /* BltFast of src (r = NULL: all of it) to (x, y) of the framebuffer (0x437a50 whole, 0x437aa0 with a
    rectangle; an empty or inverted rectangle draws nothing and succeeds). */
