@@ -1,0 +1,43 @@
+# Ghidra names for sheep_game.exe (Sheep.exe, 380,928 bytes). "<addr> <name>"; '#' comments.
+# Apply: tools/ghidra/apply.sh (renames, then re-dumps re/all.c)
+
+# --- app / main loop
+438220 WinMain
+40a170 App_Frame
+4054d0 App_PresentIfNeeded
+4a1ed0 g_appState
+4a1eb0 g_appSubState
+4b0f94 g_movie
+4b0f18 g_level
+4b0b60 g_world
+
+# --- files
+404630 Xp_Mount
+43a7f0 XpSet_Mount
+
+# --- sprites / levels
+41f5e0 Sprite_Draw
+4072d0 Level_LoadBLO
+407830 Level_InitTileAnims
+4077b0 Level_ReleaseTiles
+407700 Save_Write
+407ba0 Level_DrawMap
+407b60 Level_FindTransformed
+406c00 Level_LoadTim
+4033a0 World_SetPaths
+401000 Level_Path
+40cb40 Camera_Update
+40b9b0 Level_Frame
+427870 Menu_SetPage
+437e50 Surface_FillXform
+437a50 Surface_BltFast
+437aa0 Surface_BltFastRect
+4367a0 Surface_Create
+4368b0 Surface_CreateMirror
+4369c0 Surface_CreateFlip
+436ad0 Surface_CreateRot180
+44adec g_levelTable
+4adeb0 g_camX
+4adeb4 g_camY
+4a3d58 g_fineX
+4a3d5c g_fineY

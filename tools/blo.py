@@ -9,7 +9,10 @@ Body, in order from 0x38:
   strings (0x24 bytes), C x 32-byte entries, B x 20-byte entries, A x 256-byte entries, A x u32,
   map: width*height u16 (tile index per cell),
   tiles: count x 768 u16 rgb565 (32x24),
-  layer1: width*height u8, layer2/3: width*height u16 each, then 0x1c800 bytes of tables.
+  layer1: width*height u16, layer2: width*height u32 (low byte = cell type; the map renderer
+  0x407ba0 skips types 1 and 2), layer3: width*height u32, then 0x30000 and 0x9000 bytes of
+  tables; that is the end of the file.
+Map cells: value & 0x3fff is a tile number, remapped through the tile-animation table; 0 = empty.
 """
 import struct
 import sys
@@ -26,10 +29,11 @@ def parse(d):
     h["off_a4"] = o; o += h["na"] * 4
     h["off_map"] = o; o += h["w"] * h["h"] * 2
     h["off_tiles"] = o; o += h["ntiles"] * 768 * 2
-    h["off_l1"] = o; o += h["w"] * h["h"]
-    h["off_l2"] = o; o += h["w"] * h["h"] * 2
-    h["off_l3"] = o; o += h["w"] * h["h"] * 2
-    h["off_tab"] = o; o += 0x1c800
+    h["off_l1"] = o; o += h["w"] * h["h"] * 2
+    h["off_l2"] = o; o += h["w"] * h["h"] * 4
+    h["off_l3"] = o; o += h["w"] * h["h"] * 4
+    h["off_tab"] = o; o += 0x30000
+    h["off_tab2"] = o; o += 0x9000
     h["end"] = o
     return h
 
@@ -44,9 +48,9 @@ def render(d, h):
     cache = {}
     for cy in range(hh):
         for cx in range(w):
-            t = m[cy * w + cx]
+            t = m[cy * w + cx] & 0x3FFF
             if t not in cache:
-                if t >= h["ntiles"]:
+                if t == 0 or t >= h["ntiles"]:
                     cache[t] = Image.new("RGB", (32, 24), (255, 0, 255))
                 else:
                     px = array.array("H"); px.frombytes(d[tiles + t * 1536: tiles + t * 1536 + 1536])

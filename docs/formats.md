@@ -76,7 +76,7 @@ is 16-bit (the exe checks for "15 Bit" / "16 Bit Graphics card" and converts wit
 
 | File | Status | What |
 |---|---|---|
-| `.BLO` | partial | The level proper, stored raw (1.6–5.5 MB). Magic `"PC"`, `u16 13` (version). Then u32s: 128, 120, 24, then counts (e.g. 2095, 47, 425, 15, 5, 106, 0, 1408, 0, 2304). Then the artists' source paths (`U:\PROC\World01\Tiles\`), then a table of 32-byte entries `{u8, u8, u8, u8, char name[28]}` naming source `.tga` frames (animated tiles / objects). The bulk is graphics; the last ~360 KB are u16 indices (block maps / layers). Likely a 128-column map of 24-pixel blocks; to confirm in the exe (`Init Tile anims`, `Level Backup`). |
+| `.BLO` | done | The level proper, stored raw (1.6-5.5 MB), read by `Level_LoadBLO` 0x4072d0; decoder `tools/blo.py`. Header: `"PC"`, u8 version (>= 13) at +2, u32 width in cells (128) +4, height (120) +8, tile count +0x10, counts A +0x14, B +0x18, C +0x1c, string bytes +0x24. Body from 0x38: strings (artists' source paths), C x 32 bytes `{u8 x4, char name[28]}` (tile-animation frames), B x 20, A x 256, A x 4, map W*H u16 (`& 0x3fff` = tile number via the tile-animation remap, 0 = empty), tiles N x 32x24 rgb565, layer1 W*H u16, layer2 W*H u32 (low byte = cell type; the map renderer 0x407ba0 skips types 1 and 2), layer3 W*H u32, then 0x30000 and 0x9000 bytes of tables; that is the end of the file (checked on all 36 levels). Cells are 32x24 px, so a level is 4096x2880 px. |
 | `.TGA` | done | 640×480 24-bit RLE TGA: the overview map (Tab) |
 | `.TGB` | done | 640×480 32-bit RLE TGA: the level briefing picture |
 | `.TIM` | partial | 3 × u32: par times for the gold/silver/bronze ratings (e.g. 28800, 10800, 5400; unit TBD) |
