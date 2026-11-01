@@ -25,6 +25,7 @@ int g_4a1e89;                           /* 0x4a1e89: checked with level 5 by ani
 static uint8_t *anm[4];                 /* 0x49f880 player, 0x49f884 sheep, 0x49f888 common, 0x49f88c level */
 static size_t anm_size[4];
 static uint8_t *pos_buf;                /* 0x47db5c */
+static size_t pos_len;
 
 static int32_t rd32(const uint8_t *p) { int32_t v; memcpy(&v, p, 4); return v; }
 
@@ -364,6 +365,7 @@ void objects_load(const char *pos_path)
     /* 0x402a90 */
     free(pos_buf);
     pos_buf = NULL;
+    pos_len = 0;
     memset(g_static, 0, sizeof g_static);
     memset(g_anim, 0, sizeof g_anim);
     for (int i = 0; i < MAX_STATIC; i++) g_static[i].state = -1;
@@ -420,6 +422,7 @@ void objects_load(const char *pos_path)
        countdown, move routine, param[8]}. A static object named there becomes an animated one. */
     size_t n = 0;
     pos_buf = file_load(pos_path, &n);
+    pos_len = pos_buf ? n : 0;
     if (!pos_buf || n < 0x38) return;
     int count = rd32(pos_buf);
     for (int k = 0; k < count && 0x38 + 56 * (size_t)(k + 1) <= n; k++) {
@@ -531,3 +534,13 @@ void objects_collect(void)
         }
     }
 }
+
+int pos_count(void)
+{
+    if (!pos_buf || pos_len < 0x38) return 0;
+    int n = rd32(pos_buf);
+    int fit = (int)((pos_len - 0x38) / 56);
+    return n < 0 ? 0 : n < fit ? n : fit;
+}
+
+int pos_id(int k) { return rd32(pos_buf + 0x38 + 56 * (size_t)k); }

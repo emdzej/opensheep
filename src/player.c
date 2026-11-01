@@ -671,7 +671,7 @@ static void arc_dust(Player *p, AnimObj *a, int t, bool from_float)
     }
 }
 
-static void player_jump(Player *p)
+void player_jump(Player *p)
 {
     /* 0x415aa0 */
     AnimObj *a = &g_anim[p->slot];

@@ -778,6 +778,270 @@ static void lv35_move_03(AnimObj *a)
     }
 }
 
+/* ================================================================ 4.5: the maze */
+
+/* Pac-Man: the shepherd eats the pellets (objects with anims 0x28-0x2c; Lv45_Move_00), each lot
+   opening the next gates (ids 332-333, 334-335, 327); a power pill (Move_01) makes him fast for
+   500 ticks; ghosts (Move_02) and a grabbing trap (Move_03) cost lives. */
+static AnimObj **pellets;         /* 0x66003c */
+static int npellets;              /* 0x66001c */
+static int fast45;                /* 0x660020: power pill ticks */
+static int lot45;                 /* 0x660034: which lot of pellets is being eaten */
+static int left45[3];             /* 0x66002c, 0x660028, 0x660024 */
+static int lives45;               /* 0x660030 */
+
+static bool pellet_anim(int id)
+{
+    AnimObj *o = obj(id);
+    return o && o->anim >= 0x28 && o->anim <= 0x2c;
+}
+
+static void lv45_init(void)
+{
+    /* 0x429350 */
+    g_timer_on = 0;
+    npellets = 0;
+    int n = pos_count();
+    for (int k = 0; k < n; k++)
+        if (pellet_anim(pos_id(k))) npellets++;
+    free(pellets);
+    pellets = calloc((size_t)npellets + 1, sizeof *pellets);
+    int j = 0;
+    for (int k = 0; k < n; k++)
+        if (pellet_anim(pos_id(k)) && j < npellets) pellets[j++] = obj(pos_id(k));
+    /* (it also reads the first two points of paths 1 and 2 and drops them) */
+    left45[0] = 0x4b;
+    left45[1] = 0x58;
+    left45[2] = 0x4a;
+    lot45 = 0;
+    lives45 = 3;
+    g_hud_style = 3;
+    player_set_state(&g_player, 100);
+    fast45 = 0;
+    /* 0x660038, the power pill's looping sound, stays 0 (TODO: the mixer) */
+}
+
+static void lv45_tick(void)
+{
+    /* 0x4290d0: drowned (state 1, set by the map) the shepherd is out of the maze: 0x66 */
+    if (g_player.state != 1) return;
+    g_player.state = 0x66;
+    g_anim[PLAYER_SLOT].type = 1;
+    anim_set(PLAYER_SLOT, 2, -1);
+}
+
+static void lv45_release(void)
+{
+    /* 0x4294e0 (and the looping sound stopped, TODO: the mixer) */
+    free(pellets);
+    pellets = NULL;
+}
+
+static void lv45_actor(int32_t *a)
+{
+    /* 0x429100: 100 walking and eating (a pellet's box, 10 px larger, under him touches it),
+       fast while the pill lasts; 101 caught (anim 5); 102 jumping (move type 1, frame from the
+       arc); 103 held by the trap */
+    Player *p = (Player *)a;
+    AnimObj *o = &g_anim[p->slot];
+    switch (p->state) {
+    case 100:
+        g_action = 0;
+        player_walk(p);
+        p->anim[0] = 7;
+        p->anim[1] = 0;
+        p->anim[2] = 1;
+        o->type = 1;
+        for (int i = 0; i < npellets; i++) {
+            AnimObj *t = pellets[i];
+            if (t && g_player.iy >= t->y - 10 && g_player.iy <= t->rec.h + t->y + 10 &&
+                g_player.ix >= t->x - 10 && g_player.ix <= t->rec.w + t->x + 10) {
+                t->d[0x22] = 1;
+                t->d[0x16] = i;
+            }
+        }
+        if (fast45 == 0) {
+            p->creep = 1.0f;
+            p->walk = 2.0f;
+            p->run = 3.0f;
+            return;
+        }
+        fast45--;
+        p->creep = 1.5f;
+        p->walk = 4.0f;
+        p->run = 6.0f;
+        if (fast45 <= 0) g_anim[PLAYER_SLOT].rec.tint = 0;
+        return;
+    case 101:
+        p->speed = 0;
+        p->anim[0] = 5;
+        o->type = 1;
+        if (o->anim == 5 && o->state == 2) {
+            p->cooldown = 0x3c;
+            player_set_state(p, 100);
+        }
+        return;
+    case 102: {
+        player_jump(p);
+        o->anim = 2;
+        o->type = 1;
+        int k = o->d[0x16] ? (o->d[0x15] << 8) / o->d[0x16] : 0;   /* guarded: the original divides */
+        int f = o->nframes ? (k - 1) / o->nframes : 0;
+        o->frame = f < o->nframes ? f : 0;
+        o->countdown = 4;
+        anim_set_frame(o);
+        if (p->state != 0x66) player_set_state(p, 100);
+        return;
+    }
+    case 103:
+        p->speed = 0;
+        p->anim[0] = 6;
+        o->type = 1;
+        p->cooldown = 0x3c;
+        return;
+    }
+}
+
+static void gate_obj_open(int id)
+{
+    AnimObj *o = obj(id);
+    if (o) o->d[0x22] = 0;
+}
+
+static void lv45_move_00(AnimObj *a)
+{
+    /* 0x429550: a pellet, eaten: 5 points; the last of a lot opens the next gates */
+    if (a->d[0x22] != -1) {
+        sound_play_at(a, crt_rand() % 5 + 2, 0, 0);
+        int i = a->d[0x16];
+        if (i >= 0 && i < npellets && pellets[i]) {
+            anim_kill(pellets[i]);
+            pellets[i] = NULL;
+        }
+        g_score += 5;
+        if (lot45 < 3 && --left45[lot45] == 0) {
+            static const int gates[3][2] = { { 0x14c, 0x14d }, { 0x14e, 0x14f }, { 0x147, -1 } };
+            for (int g = 0; g < 2; g++)
+                if (gates[lot45][g] != -1) gate_obj_open(gates[lot45][g]);
+            lot45++;
+        }
+    }
+    a->d[0x22] = -1;
+}
+
+static void lv45_move_01(AnimObj *a)
+{
+    /* 0x429690: the power pill: 5 points, 500 fast ticks (tinted 2), sound 9 (and a looping one
+       with the music down to 0.9: TODO, the mixer) */
+    if (a->d[0x22] != -1) {
+        int i = a->d[0x16];
+        if (i >= 0 && i < npellets && pellets[i]) {
+            anim_kill(pellets[i]);
+            pellets[i] = NULL;
+        }
+        g_score += 5;
+        fast45 = 500;
+        g_anim[PLAYER_SLOT].rec.tint = 2;
+        sound_play_at(a, 9, 0, 0);
+    }
+    a->d[0x22] = -1;
+}
+
+static void lv45_lose_life(void)
+{
+    if (--lives45 == 0) g_end = 7;
+}
+
+static void lv45_move_02(AnimObj *a)
+{
+    /* 0x429730: a ghost along path d16 (anim d15); within 32 px (Manhattan) of the walking
+       shepherd it catches him */
+    if (a->sub == 0) {
+        path_begin(a, a->d[0x16], 2, 0);
+        anim_set(a->slot, a->d[0x15], -1);
+        a->sub = 1;
+    } else if (a->sub == 1) {
+        path_follow(a);
+    }
+    if (iabs(a->y - g_player.iy) + iabs(a->x - g_player.ix) < 0x20 && g_player.state == 100) {
+        player_set_state(&g_player, 10);
+        g_player.state = 0x65;
+        lv45_lose_life();
+    }
+}
+
+static void special_active(int si, int v)
+{
+    if (si >= 0 && si < MAX_SPECIAL) g_special[si].active = (uint8_t)v;   /* the original: unchecked */
+}
+
+static void lv45_move_03(AnimObj *a)
+{
+    /* 0x4297e0: the trap along path d16, its specials d17 / d19 / d1b blocked except from points
+       d18 / d1a / d1c on; touched, it grabs whoever (anim d15, 103), hides the shepherd once
+       past frame 2, and at the end puts him back at (2080, 1580) for a life */
+    int32_t *d = a->d;
+    if (d[0x17] != -1) special_active(d[0x17], 1);
+    if (d[0x19] != -1) special_active(d[0x19], 1);
+    if (d[0x1b] != -1) special_active(d[0x1b], 1);
+    int touched = d[0x22];
+    switch (a->sub) {
+    case 0:
+        path_begin(a, d[0x16], 0, 0);
+        d[0x1d] = a->anim;
+        a->sub = 1;
+        d[0x22] = -1;
+        return;
+    case 1:
+        path_follow(a);
+        if (touched != -1) {
+            int32_t *w = actor(d[0x21]);
+            d[0x1e] = d[0x21];
+            w[3] = 0x67;
+            w[0x10] = w[0xf] = w[0xe] = 6;
+            anim_set(a->slot, d[0x15], (a->dir - 4) & 0xf);
+            a->sub = 2;
+        }
+        if (d[0x24] == d[0x18]) special_active(d[0x17], 0);
+        if (d[0x24] == d[0x1a]) special_active(d[0x19], 0);
+        if (d[0x24] == d[0x1c]) {
+            special_active(d[0x1b], 0);
+            d[0x22] = -1;
+            return;
+        }
+        break;
+    case 2: {
+        int32_t *w = actor(d[0x1e]);
+        w[0x10] = w[0xf] = w[0xe] = 6;
+        if (a->frame > 2) {
+            g_anim[PLAYER_SLOT].rec.scale_x = 0;
+            a->sub = 3;
+            d[0x22] = -1;
+            return;
+        }
+        break;
+    }
+    case 3:
+        if (a->state == 2) {
+            anim_set(a->slot, d[0x1d], (a->dir + 4) & 0xf);
+            if (--lives45 == 0) {
+                g_end = 7;
+                a->sub = 1;
+                d[0x22] = -1;
+                return;
+            }
+            int32_t *w = actor(d[0x1e]);
+            w[3] = 100;
+            g_anim[PLAYER_SLOT].rec.scale_x = 0x100;
+            ((float *)w)[10] = 2080.0f;
+            ((float *)w)[11] = 1580.0f;
+            a->sub = 1;
+        }
+        break;
+    }
+    d[0x22] = -1;
+}
+
 /* ================================================================ dispatch */
 
 bool bonus_actor(uint32_t va, int32_t *actor)
@@ -786,6 +1050,7 @@ bool bonus_actor(uint32_t va, int32_t *actor)
     case 0x423ef0: lv15_actor(actor); return true;
     case 0x42ac60: lv25_actor(actor); return true;
     case 0x425bd0: lv35_actor(actor); return true;
+    case 0x429100: lv45_actor(actor); return true;
     default: return false;
     }
 }
@@ -799,6 +1064,9 @@ bool bonus_call(uint32_t va)
     case 0x42aa30: lv25_tick(); return true;
     case 0x4258b0: lv35_init(); return true;
     case 0x4258e0: lv35_tick(); return true;
+    case 0x429350: lv45_init(); return true;
+    case 0x4290d0: lv45_tick(); return true;
+    case 0x4294e0: lv45_release(); return true;
     default: return false;
     }
 }
@@ -813,6 +1081,10 @@ MoveFn bonus_move(uint32_t va)
     case 0x425d10: return lv35_move_01;
     case 0x425da0: return lv35_move_02;
     case 0x425ea0: return lv35_move_03;
+    case 0x429550: return lv45_move_00;
+    case 0x429690: return lv45_move_01;
+    case 0x429730: return lv45_move_02;
+    case 0x4297e0: return lv45_move_03;
     default: return NULL;
     }
 }

@@ -89,6 +89,9 @@ void anims_free(void);
 
 /* 0x402a90: objects from the level's B table, then the .POS file. */
 void objects_load(const char *pos_path);
+/* The .POS records still loaded (0x47db5c): their number and record k's object id. */
+int pos_count(void);
+int pos_id(int k);
 int static_new(int x, int y, int anim, int dir);              /* 0x402220 */
 int anim_new(int x, int y, int anim, int dir, int type);      /* 0x402330 */
 void anim_set_frame(AnimObj *a);                              /* 0x401e90 */

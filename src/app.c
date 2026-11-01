@@ -5,6 +5,7 @@
 #include "exe.h"
 #include "input.h"
 #include "level.h"
+#include "levels.h"
 #include "objects.h"
 #include "play.h"
 #include "player.h"
@@ -25,6 +26,8 @@ static int gallery_bank = SPR_BANK_LEVEL;
 
 static bool load(int world, int level)
 {
+    /* 0x406cc0 in mode 1 runs the level's release hook before the tiles go */
+    if (g_level != 0 && !viewer) level_hook(DESC_RELEASE);
     if (!world_select(world, level)) return false;
     if (!viewer && level != 0) {
         if (!level_load_resources()) return false;
