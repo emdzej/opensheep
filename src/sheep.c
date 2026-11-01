@@ -1126,6 +1126,338 @@ static void sheep_slide(Sheep *a, int n, bool spinning)
     if (spinning) a->y = (float)((double)a->y + 0.5);
 }
 
+static void sheep_spin_on_player(Sheep *a)
+{
+    /* state 0xb: spins on the shepherd's spot, u18 turning by the timer (wrapping 0..359) until
+       within 4 px, when the timer becomes 0x42. The original first clears bit 0 of d1d of the
+       sheep numbered by the scratch 0x4adedc (left by the shepherd's walk or the draw loop,
+       usually 30: past the flock); not done here. */
+    a->face = (a->face + 0x10) & 0xff;
+    a->dir = a->face;
+    if (a->timer == 0x42) return;
+    int dx = a->ix - ftol((double)g_player.x), dy = a->iy - ftol((double)g_player.y);
+    if (sqrt((double)(dy * dy) + (double)(dx * dx)) - 4.0 <= 0.0) a->timer = 0x42;
+    a->x = (float)((double)g_player.x + 0.0);
+    a->y = (float)((double)g_player.y + 0.0);
+    int t = a->timer;
+    if (t > 8) t -= 0x11;
+    a->u18 += t;
+    if (a->u18 > 0x167) a->u18 -= 0x168;
+    if (a->u18 < 0) a->u18 += 0x168;
+}
+
+static int sheep_beam_step(Sheep *a)
+{
+    /* 0x411800: drawn to (o d18, d19), scaled by its distance (d17 = 0x40000 / the first one);
+       there 1, with d1c set by the kind u18 (0 -32..31, 1 any, 2 the timer, 4 150..213; 5 hides it) */
+    AnimObj *o = &g_anim[a->slot];
+    int32_t *d = o->d;
+    a->speed = 0.0f;
+    int dx = ftol((double)a->x) - d[0x18], dy = ftol((double)a->y) - d[0x19];
+    double dist = sqrt((double)(dy * dy) + (double)(dx * dx));
+    if (d[0x17] == 0) {
+        int r = ftol(dist);
+        d[0x17] = r ? 0x40000 / r : 0;  /* the original divides by zero when already there */
+    }
+    if (dist - 0.5 <= 0.0) {
+        a->x = (float)d[0x1a];
+        a->y = (float)d[0x1b];
+        switch (a->u18) {
+        case 0: d[0x1c] = ((int)(rng_next() & 0x3f) - 0x20) & 0xff; break;
+        case 1: d[0x1c] = (int)(rng_next() & 0xff); break;
+        case 2: d[0x1c] = a->timer; break;
+        case 4: d[0x1c] = (int)(rng_next() & 0x3f) + 0x96; break;
+        case 5: o->rec.scale_x = o->rec.scale_y = 0; break;
+        }
+        return 1;
+    }
+    int v = ftol(dist) * d[0x17];
+    int s = (v + (v < 0 ? 0x3ff : 0)) >> 10;
+    if (d[0x17] == -1) s = 0x100;
+    o->rec.scale_x = o->rec.scale_y = s;
+    a->x = (float)((double)d[0x18] + 0);
+    a->y = (float)((double)d[0x19] + 0);
+    d[0x1c] = (d[0x1c] + d[0x16]) & 0xff;
+    a->dir = a->face = (a->dir + 10) & 0xff;
+    return 0;
+}
+
+static void sheep_beamed(Sheep *a)
+{
+    /* state 0x12: rises 4 px a tick (after 6) up a beam; above o d1a it counts as penned */
+    AnimObj *o = &g_anim[a->slot];
+    int v = o->d[0x1b];
+    o->rec.mode = 0;
+    o->d[0x1b] = v + 1;
+    if (v > 5) {
+        a->y = (float)((double)a->y - 4.0);
+        o->d[0x19] -= 4;
+    }
+    if (a->timer == 0) a->timer = sheep_beam_step(a);
+    if ((float)o->d[0x1a] > a->y) {
+        a->alive = 1;
+        g_saved++;
+    }
+}
+
+static void sheep_pushed(Sheep *a)
+{
+    /* 0x41d950, state 0x15: pushed ahead of the shepherd (his move type 0x15), speeding up to 2;
+       blocked for 30 ticks both stop (he to 10) */
+    if (a->speed < 2.0f) a->speed = (float)((double)a->speed + (double)0.1f);
+    a->face = a->dir = g_player.face;
+    float nx = (float)((double)g_sin[a->dir] * (double)a->speed + (double)a->x);
+    float ny = (float)((double)a->y - (double)g_cos[a->dir] * (double)a->speed);
+    sheep_collide(ftol((double)nx), ftol((double)ny), a->d, 1);
+    AnimObj *o = &g_anim[a->slot], *po = &g_anim[g_player.slot];
+    if (a->state == 0x15 && g_player.state == 0x15) {
+        if (a->hit == 2) o->d[0x15]++;
+        else o->d[0x15] = 0;
+        if (o->d[0x15] == 0) {
+            g_player.y = (float)((double)ny + 6.0);
+            a->x = nx;
+            a->y = ny;
+            g_player.x = nx;
+        }
+        if (a->kind == 0) {
+            o->frame = po->frame;
+            o->countdown = po->countdown;
+            anim_set_frame(o);
+        }
+        po->depth_off = 0x30;
+        po->rec.shadow_dy = 10;
+        if (o->d[0x15] > 0x1e) {
+            po->depth_off = 0;
+            po->rec.shadow_dy = 0;
+            player_set_state(&g_player, 10);
+            actor_set_state(a->d, 0);
+        }
+        g_player.speed = 0.0f;
+        return;
+    }
+    po->depth_off = 0;
+    po->rec.shadow_dy = 0;
+    player_set_state(&g_player, 10);
+}
+
+static void sheep_path_ride(Sheep *a)
+{
+    /* 0x41db60, state 0x18: walks to the start of its object's path (d23), rides it (kind o d15 /
+       d16 at point d18; animations 0xe on points 1-2 if d17 is 1), then walks on */
+    AnimObj *o = &g_anim[a->slot];
+    a->d[0x1d] &= ~1;
+    if (o->sub == 0) {
+        path_start(o->d[0x23]);
+        a->speed = 2.0f;
+        if (actor_walk_to(a->d, g_path_x, g_path_y)) o->sub = 1;
+    } else if (o->sub == 1) {
+        int end = path_follow(o);
+        a->dir = o->dir << 4;
+        a->x = (float)o->x;
+        a->y = (float)o->y;
+        if (o->d[0x17] == 1 && 0 < o->d[0x24] && o->d[0x24] < 3) a->anim[0] = a->anim[1] = a->anim[2] = 0xe;
+        if (o->d[0x24] == o->d[0x18] && o->d[0x25] == 0) sheep_set_kind(a->d, o->d[0x15], o->d[0x16]);
+        if (end) {
+            a->state = 0;
+            if (a->slot < 0x1e) {
+                a->face = a->dir;
+                a->d[0x1d] |= 1;
+                return;
+            }
+        }
+    }
+    a->face = a->dir;
+}
+
+static void sheep_bounce(Sheep *a)
+{
+    /* 0x41dc70, state 0x1a: crouches (0x15), springs (0x16) up 64 px and again 16 px, lands (0x17) */
+    AnimObj *o = &g_anim[a->slot];
+    switch (o->sub) {
+    case 0:
+        a->speed = 0.0f;
+        a->anim[0] = 0x15;
+        o->sub = 1;
+        break;
+    case 1:
+        a->anim[0] = 0x15;
+        if (o->state == 2) {
+            a->anim[0] = 0x16;
+            o->d[0x15] = 0x40;
+            o->sub = 2;
+        }
+        break;
+    case 2:
+        o->d[0x15] = 0;
+        o->d[0x16] = a->iy;
+        o->sub = 3;
+        break;
+    case 3:
+    case 4: {
+        a->anim[0] = 0x16;
+        int step = o->sub == 3 ? 4 : 6;
+        double h = o->sub == 3 ? 64.0 : 16.0;
+        o->d[0x15] += step;
+        double up = (double)g_sin[o->d[0x15]] * h;
+        a->y = (float)((double)o->d[0x16] - up);
+        o->rec.shadow_dy = ftol(up);
+        if (o->d[0x15] > 0x80) {
+            if (o->sub == 3) o->d[0x15] = 0;
+            else o->rec.shadow_dy = 0;
+            o->sub++;
+        }
+        break;
+    }
+    case 5:
+        a->anim[0] = 0x17;
+        if (o->state == 2) actor_set_state(a->d, 0);
+        break;
+    }
+    a->face = a->dir;
+}
+
+static void sheep_fall_in(Sheep *a)
+{
+    /* 0x41ddf0, state 0x1c: falls 220 px, spinning and shrinking, then state 0x17 */
+    AnimObj *o = &g_anim[a->slot];
+    a->d[0x1d] &= ~1;
+    if (o->sub == 0) {
+        o->d[0x1b] = a->iy + 0xdc;
+        o->speed = 1.0f;
+        o->rec.mode = 3;
+        o->depth_off = -1000;
+        o->d[0x1c] = 0x100;
+        sound_play_at(o, crt_rand() % 2 + 0x7a, 0, 0);
+        o->sub = 1;
+    } else if (o->sub == 1) {
+        if (o->speed <= 5.0f) o->speed = (float)((double)o->speed + (double)0.2f);
+        a->y = (float)((double)a->y + (double)o->speed);
+        o->d[0x1c]--;
+        o->rec.scale_x = o->rec.scale_y = o->d[0x1c];
+        a->dir = (a->dir + 8) & 0xff;
+        if ((float)o->d[0x1b] < a->y) actor_set_state(a->d, 0x17);
+    }
+    a->face = a->dir;
+}
+
+static void sheep_held(Sheep *a)
+{
+    /* 0x41df10, state 0x1e: stands at (o d15, d16) (facing 0xa0 in 3.2) until the shepherd picks it up */
+    AnimObj *o = &g_anim[a->slot];
+    a->d[0x1d] &= ~1;
+    o->rec.shadow_dy = 0;
+    o->depth_off = 0;
+    if (o->sub == 0) {
+        a->x = (float)o->d[0x15];
+        a->speed = 0.0f;
+        a->anim[0] = 0x1c;
+        a->y = (float)o->d[0x16];
+        if (g_world == 3 && g_level == 2) a->face = a->dir = 0xa0;
+        o->sub = 1;
+    } else if (o->sub == 1) {
+        a->speed = 0.0f;
+        a->anim[0] = 0x1c;
+        sheep_collide(a->ix, a->iy, a->d, 1);
+        sheep_pickup(a);
+    }
+    a->face = a->dir;
+}
+
+static void sheep_skid(Sheep *a)
+{
+    /* 0x41dfe0, state 0x1f: slides on, spinning, slowing by 0.1 to 1; a wall stops it where it was */
+    float ox = a->x, oy = a->y;
+    a->d[0x1d] &= ~1;
+    if (a->kind == 0) a->anim[0] = a->anim[1] = a->anim[2] = 0x16;
+    int nf = (a->face + 8) & 0xff;
+    a->x = (float)((double)g_sin[a->dir] * (double)a->speed + (double)a->x);
+    a->y = (float)((double)a->y - (double)g_cos[a->dir] * (double)a->speed);
+    a->face = nf;
+    a->speed = (float)((double)a->speed - (double)0.1f);
+    if (a->speed <= 1.0f) {
+        a->dir = nf;
+        actor_set_state(a->d, 0);
+        a->d[0x1d] |= 1;
+    }
+    sheep_collide(ftol((double)a->x), ftol((double)a->y), a->d, 1);
+    if (a->hit == 2) {
+        a->x = ox;
+        a->y = oy;
+        a->dir = a->face;
+        a->speed = 0.0f;
+        actor_set_state(a->d, 0);
+        a->d[0x1d] |= 1;
+    }
+}
+
+static void sheep_teleport(Sheep *a)
+{
+    /* 0x41e0d0, state 0x20: shrinks away, reappears at (o d15, d16) with sound d17 and grows back */
+    AnimObj *o = &g_anim[a->slot];
+    a->speed = 0.0f;
+    a->d[0x1d] &= ~1;
+    if (o->sub == 0) {
+        o->rec.scale_x -= 10;
+        if (o->rec.scale_x < 0) {
+            o->rec.scale_x = 0;
+            a->x = (float)o->d[0x15];
+            a->y = (float)o->d[0x16];
+            o->sub = 1;
+        }
+        o->rec.scale_y = o->rec.scale_x;
+    } else if (o->sub == 1) {
+        if (o->d[0x17] != 0) sound_play_at(o, o->d[0x17], 0, 0);
+        o->sub = 2;
+    } else if (o->sub == 2) {
+        o->rec.scale_x += 10;
+        if (o->rec.scale_x > 0x100) {
+            o->rec.scale_x = 0x100;
+            a->d[0x1d] |= 1;
+            actor_set_state(a->d, 0);
+        }
+        o->rec.scale_y = o->rec.scale_x;
+    }
+}
+
+static void sheep_conveyed(Sheep *a)
+{
+    /* 0x41e1b0, state 0x21: carried along push_dir at the object's speed, walking (state 0 again) */
+    AnimObj *o = &g_anim[a->slot];
+    a->x = (float)((double)g_sin[a->push_dir * 16] * (double)o->speed + (double)a->x);
+    a->y = (float)((double)a->y - (double)g_cos[a->push_dir * 16] * (double)o->speed);
+    a->state = 0;
+    sheep_walk(a);
+    if (a->kind == 0) a->anim[0] = a->anim[1] = a->anim[2] = 2;
+    if (o->state == 2) anim_set(o->slot, 2, -1);
+}
+
+static void sheep_whirled(Sheep *a)
+{
+    /* 0x41e230, state 0x22: whirled round a centre that drifts 4 px a tick along its heading, the
+       radius growing from 10; past 100 it is lost */
+    AnimObj *o = &g_anim[a->slot];
+    int32_t *d = o->d;
+    if (o->sub == 0) {
+        d[0x17] = 10;
+        d[0x18] = (a->face + 0x40) & 0xff;
+        d[0x19] = a->face;
+        d[0x15] = a->ix - ftol((double)g_sin[d[0x18]] * 10.0);
+        d[0x16] = a->iy - ftol((double)g_cos[d[0x18]] * -10.0);
+        o->sub = 1;
+    } else if (o->sub == 1) {
+        a->d[0x1d] &= ~1;
+        d[0x18] = (d[0x18] + 8) & 0xff;
+        d[0x15] += ftol((double)g_sin[d[0x19]] * 4.0);
+        d[0x16] += ftol((double)g_cos[d[0x19]] * -4.0);
+        a->x = (float)((double)d[0x17] * g_sin[d[0x18]] + d[0x15]);
+        a->y = (float)((double)d[0x16] - (double)d[0x17] * g_cos[d[0x18]]);
+        if ((d[0x1d]++ & 3) == 0) d[0x17] += 2;
+        int r = d[0x17];
+        if (r > 0x24) o->rec.scale_x = o->rec.scale_y = (100 - r) * 4;
+        if (r > 99) sheep_out(a->slot);
+    }
+}
+
 void sheep_tick(void)
 {
     g_flock_sx = g_flock_sy = -1;
@@ -1312,10 +1644,18 @@ void sheep_tick(void)
         case 0x16:
             sheep_slide(a, n, true);
             break;
-        case 0x19: case 0x1b: case 0x1d:
-            break;
-        default:
-            sheep_state_unported(a);
+        case 0xb: sheep_spin_on_player(a); break;
+        case 0x12: sheep_beamed(a); break;
+        case 0x15: sheep_pushed(a); break;
+        case 0x18: sheep_path_ride(a); break;
+        case 0x1a: sheep_bounce(a); break;
+        case 0x1c: sheep_fall_in(a); break;
+        case 0x1e: sheep_held(a); break;
+        case 0x1f: sheep_skid(a); break;
+        case 0x20: sheep_teleport(a); break;
+        case 0x21: sheep_conveyed(a); break;
+        case 0x22: sheep_whirled(a); break;
+        default:                        /* 2, 3, 5, 0x11, 0x13, 0x17, 0x19, 0x1b, 0x1d: nothing */
             break;
         }
         a->ix = ftol((double)a->x);
@@ -1324,16 +1664,6 @@ void sheep_tick(void)
         if (kt != -1 && 0 < kt && --a->u50 == 0) sheep_set_kind(a->d, 0, -1);
     }
     sheep_animate();
-}
-
-void sheep_state_unported(Sheep *a)
-{
-    static bool said[64];
-    int s = a->state & 63;
-    if (!said[s]) {
-        said[s] = true;
-        fprintf(stderr, "sheep state 0x%x not ported\n", a->state);
-    }
 }
 
 /* ---------------------------------------------------------------- animation (0x41e380) */
