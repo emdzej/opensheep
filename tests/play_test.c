@@ -75,6 +75,17 @@ int main(void)
     CHECK(g_demo == 3 && g_end == 6 && t == 51, "playback %d end %d after %d", g_demo, g_end, t);
     g_demo = 0;
 
+    /* the breed's tuning written back (0x41e850) and read in place of the disc's */
+    flock_vars_load(1);
+    FlockVars disc = g_fvars;
+    g_fvars.sheep_speed += 7;
+    flock_vars_save(1);
+    g_fvars = disc;
+    flock_vars_load(1);
+    CHECK(g_fvars.sheep_speed == disc.sheep_speed + 7 && g_fvars.bias_player == disc.bias_player &&
+          g_flock.sheep_speed == g_fvars.sheep_speed, "stored flock vars %d", g_fvars.sheep_speed);
+    remove("/tmp/opensheep_test/Factoral.txt");
+
     /* the sound lists: effect 50 (generic.slf) loaded, 16 effect slots, the music streamed */
     start();
     int v = sound_play(50, 0, 0);

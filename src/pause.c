@@ -112,9 +112,24 @@ static void call(uint32_t va)
             pause_open(0x11);
         }
         break;
-    case 0x40f400: case 0x40f480:
-        /* TODO: the debug change of shepherd (0x4180e0, 0x4014c0) and of breed (0x41e850, 0x41e960,
-           0x401560) mid-level */
+    case 0x40f400:                                     /* (debug) another shepherd, mid-level */
+        if (pick <= 3) {
+            g_char = (int8_t)pick;
+            player_vars_load(g_char);
+            player_banks_load();
+            g_player.creep = (float)((double)g_pvars.creep_speed * (double)exe_f32(0x448324));
+            g_player.walk = (float)((double)g_pvars.walk_speed * (double)exe_f32(0x448324));
+            g_player.run = (float)((double)g_pvars.run_speed * (double)exe_f32(0x448324));
+        }
+        g_pause = 0;
+        break;
+    case 0x40f480:                                     /* (debug) another breed, mid-level */
+        if (pick <= 3) {
+            flock_vars_save(g_breed);
+            g_breed = pick;
+            flock_vars_load(g_breed);
+            sheep_banks_load();
+        }
         g_pause = 0;
         break;
     case 0x40f470: g_difficulty = (int8_t)cur; break;

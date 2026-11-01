@@ -1,9 +1,11 @@
 #include "game.h"
+#include "platform.h"
 #include "exe.h"
 #include "sprites.h"
 #include "world.h"
 #include "xp.h"
 #include <math.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -122,11 +124,8 @@ static int32_t parse_num(const char *p, const char *end)
 typedef struct { const char *name; int32_t *var; } VarDef;
 
 /* The vars parsers 0x4180e0 / 0x41e960: every line that starts with a variable's name sets it. */
-static bool vars_load(const char *path, const VarDef *defs)
+static void vars_parse(const char *buf, size_t n, const VarDef *defs)
 {
-    size_t n = 0;
-    char *buf = (char *)file_load(path, &n);
-    if (!buf) return false;
     const char *end = buf + n;
     for (const char *p = buf; p < end;) {
         for (const VarDef *d = defs; d->name; d++) {
@@ -139,8 +138,28 @@ static bool vars_load(const char *path, const VarDef *defs)
         while (p < end && *p != '\n') p++;
         p++;
     }
+}
+
+static bool vars_load(const char *path, const VarDef *defs)
+{
+    size_t n = 0;
+    char *buf = (char *)file_load(path, &n);
+    if (!buf) return false;
+    vars_parse(buf, n, defs);
     free(buf);
     return true;
+}
+
+/* The flock's file as 0x41e850 last wrote it (an installed game's Data\misc, which the disc can't
+   be): kept in the host's storage under the file's name. */
+enum { FLOCK_FILE_MAX = 0x10000 };
+static const char *const breed_names[] = { "Pastoral", "Factoral", "Longwool", "Neogenetic" };  /* 0x44d2d0 */
+
+static char *flock_key(int breed)
+{
+    static char key[32];
+    snprintf(key, sizeof key, "%s%s", breed_names[breed & 3], exe_str(0x44d2e0));
+    return key;
 }
 
 void player_vars_load(int character)
@@ -159,7 +178,6 @@ void player_vars_load(int character)
 
 void flock_vars_load(int breed)
 {
-    static const char *const names[] = { "Pastoral", "Factoral", "Longwool", "Neogenetic" };  /* 0x44d2d0 */
     FlockVars *v = &g_fvars;
     const VarDef defs[] = {                                                     /* 0x44d1c0 */
         { "NEIGHBOUR_DIST", &v->neighbour_dist }, { "NUM_NEIGHBOURS", &v->num_neighbours },
@@ -172,9 +190,42 @@ void flock_vars_load(int breed)
         { NULL, NULL },
     };
     char path[64];
-    snprintf(path, sizeof path, "data\\misc\\%s.txt", names[breed & 3]);
-    if (!vars_load(path, defs)) fprintf(stderr, "Cannot load Flock Vars file %s\n", path);
+    snprintf(path, sizeof path, "data\\misc\\%s.txt", breed_names[breed & 3]);
+    char *saved = malloc(FLOCK_FILE_MAX);
+    int n = saved ? plat_storage_get(flock_key(breed), saved, FLOCK_FILE_MAX) : -1;
+    if (n > 0) vars_parse(saved, (size_t)n, defs);
+    else if (!vars_load(path, defs)) fprintf(stderr, "Cannot load Flock Vars file %s\n", path);
+    free(saved);
     g_flock = g_fvars;
+}
+
+void flock_vars_save(int breed)
+{
+    /* 0x41e850: per entry of the table at 0x44d1c0 ({name, variable, comment}, the variables
+       g_fvars's): a rule line, the comment, then the name and the value */
+    static const size_t field[] = {
+        offsetof(FlockVars, neighbour_dist), offsetof(FlockVars, num_neighbours),
+        offsetof(FlockVars, too_close_dist), offsetof(FlockVars, turn_speed),
+        offsetof(FlockVars, sheep_accel), offsetof(FlockVars, man_ahead_dist),
+        offsetof(FlockVars, bias_center), offsetof(FlockVars, bias_direction),
+        offsetof(FlockVars, bias_closest), offsetof(FlockVars, bias_random),
+        offsetof(FlockVars, bias_player), offsetof(FlockVars, amble_speed),
+        offsetof(FlockVars, wander_radius), offsetof(FlockVars, sheep_speed),
+    };
+    char *buf = malloc(FLOCK_FILE_MAX);
+    if (!buf) return;
+    size_t n = 0;
+    const char *nl = exe_str(0x44d2c0);
+    for (uint32_t e = 0x44d1c0, i = 0; exe_u32(e) && i < sizeof field / sizeof field[0]; e += 12, i++) {
+        int32_t v;
+        memcpy(&v, (const char *)&g_fvars + field[i], 4);
+        int k = snprintf(buf + n, FLOCK_FILE_MAX - n, "%s%s%s%s%s%s%s%s%d%s%s", nl, exe_str(0x44d274), nl,
+                         exe_str(exe_u32(e + 8)), nl, nl, exe_str(exe_u32(e)), exe_str(0x44b9d0), (int)v, nl, nl);
+        if (k < 0 || (size_t)k >= FLOCK_FILE_MAX - n) break;
+        n += (size_t)k;
+    }
+    plat_storage_set(flock_key(breed), buf, (int)n);
+    free(buf);
 }
 
 int attract_new(int x, int y, int type, int range, int power)
@@ -259,8 +310,12 @@ void bank_table_load(uint32_t table, int first) { banks_from_table(table, first,
 
 void bank_entry_load(uint32_t entry, int bank) { sprite_bank_load(bank, bank_path(entry)); }
 
+void player_banks_load(void) { banks_from_table(0x44a348, 0, desc_u32(DESC_PLAYER_BANKS)); }
+
+void sheep_banks_load(void) { banks_from_table(0x44a1d0, 50, desc_u32(DESC_SHEEP_BANKS)); }
+
 void actor_banks_load(void)
 {
-    banks_from_table(0x44a348, 0, desc_u32(DESC_PLAYER_BANKS));
-    banks_from_table(0x44a1d0, 50, desc_u32(DESC_SHEEP_BANKS));
+    player_banks_load();
+    sheep_banks_load();
 }

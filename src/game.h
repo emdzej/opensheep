@@ -44,7 +44,8 @@ extern PlayerVars g_pvars;
 extern FlockVars g_fvars;                   /* the file's values ... */
 extern FlockVars g_flock;                   /* 0x4bbd10: ... copied for the level */
 void player_vars_load(int character);       /* 0x4180e0 */
-void flock_vars_load(int breed);            /* 0x41e960 */
+void flock_vars_load(int breed);            /* 0x41e960: the stored copy (flock_vars_save) first */
+void flock_vars_save(int breed);            /* 0x41e850: g_fvars as the breed's file, to the host's storage */
 
 /* ---------------------------------------------------------------- attractors (0x4a04c0) */
 typedef struct {
@@ -75,6 +76,8 @@ void bank_table_load(uint32_t table, int first);
 /* One bank table entry into a bank (0x401050, then Sprite_LoadBank). */
 void bank_entry_load(uint32_t entry, int bank);
 void actor_banks_load(void);                /* 0x4014c0, 0x401560: the shepherd's and the flock's banks */
+void player_banks_load(void);               /* 0x4014c0 */
+void sheep_banks_load(void);                /* 0x401560 */
 
 /* ---------------------------------------------------------------- the shepherd (0x4b9788) */
 typedef union {
