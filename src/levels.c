@@ -11,6 +11,8 @@ static void unported(const char *what, uint32_t va)
     fprintf(stderr, "level %s hook 0x%x not ported\n", what, va);
 }
 
+static MoveFn no_move(uint32_t va) { (void)va; return NULL; }
+
 static const struct {
     bool (*actor)(uint32_t va, int32_t *actor);
     bool (*call)(uint32_t va);
@@ -19,6 +21,7 @@ static const struct {
     { lv1_actor, NULL, lv1_move }, { lv2_actor, NULL, lv2_move }, { lv3_actor, lv3_call, lv3_move },
     { lv4_actor, lv4_call, lv4_move }, { lv5_actor, NULL, lv5_move }, { lv6_actor, NULL, lv6_move },
     { lv7_actor, lv7_call, lv7_move }, { lv9_actor, NULL, lv9_move }, { bonus_actor, bonus_call, bonus_move },
+    { cars_actor, cars_call, no_move },
 };
 
 void level_hook(uint32_t off)

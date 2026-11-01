@@ -102,3 +102,5 @@ MoveFn lv9_move(uint32_t va);
 bool bonus_actor(uint32_t va, int32_t *actor);
 bool bonus_call(uint32_t va);
 MoveFn bonus_move(uint32_t va);
+bool cars_actor(uint32_t va, int32_t *actor);
+bool cars_call(uint32_t va);

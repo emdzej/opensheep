@@ -10,6 +10,8 @@ void paths_free(void);
 void path_point(int p, int i, int *x, int *y);
 /* 0x411b40: point i of path p's ticks (+2). */
 int path_ticks(int p, int i);
+/* 0x411b40: point i of path p's flag (0 the start, 2 the end; 2 if there is no such point). */
+int path_flag(int p, int i);
 /* 0x411b60: the first point of path p into g_path_x / g_path_y. */
 void path_start(int p);
 /* 0x411bc0: an object follows path p (mode 0-4, see path_follow); flags & 1 puts it on the start. */
