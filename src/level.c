@@ -115,6 +115,8 @@ bool level_load_blo(const char *path)
     g_lv.cam_max_y = hdr32(b, 0x34);
     g_lv.px_w = w << 5;
     g_lv.px_h = h * TILE_H;
+    g_lv.objects = b + off_anim + (size_t)nc * 32;
+    g_lv.nobjects = nb;
     g_lv.banks = b + off_anim + (size_t)nc * 32 + (size_t)nb * 20;
     g_lv.nbanks = na;
     g_lv.anim_frames = b + off_anim;

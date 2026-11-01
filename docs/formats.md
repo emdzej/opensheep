@@ -76,15 +76,15 @@ is 16-bit (the exe checks for "15 Bit" / "16 Bit Graphics card" and converts wit
 
 | File | Status | What |
 |---|---|---|
-| `.BLO` | done | The level proper, stored raw (1.6-5.5 MB), read by `Level_LoadBLO` 0x4072d0; decoder `tools/blo.py`. Header: `"PC"`, u8 version (>= 13) at +2, u32 width in cells (128) +4, height (120) +8, tile count +0x10, counts A +0x14, B +0x18, C +0x1c, string bytes +0x24. Body from 0x38: strings (artists' source paths), C x 32 bytes `{u8 x4, char name[28]}` (tile-animation frames), B x 20, A x 256, A x 4, map W*H u16 (`& 0x3fff` = tile number via the tile-animation remap, 0 = empty), tiles N x 32x24 rgb565, layer1 W*H u16, layer2 W*H u32 (low byte = cell type; the map renderer 0x407ba0 skips types 1 and 2), layer3 W*H u32, then 0x30000 and 0x9000 bytes of tables; that is the end of the file (checked on all 36 levels). Cells are 32x24 px, so a level is 4096x2880 px. |
+| `.BLO` | done | The level proper, stored raw (1.6-5.5 MB), read by `Level_LoadBLO` 0x4072d0; decoder `tools/blo.py`. Header: `"PC"`, u8 version (>= 13) at +2, u32 width in cells (128) +4, height (120) +8, tile count +0x10, counts A +0x14, B +0x18, C +0x1c, string bytes +0x24. Body from 0x38: strings (artists' source paths), C x 32 bytes `{u8 x4, char name[28]}` (tile-animation frames), B x 20 (object placements, from index 31: `{i16 x, y, spr, depth; u8 mirror, sortable, layer, mode; i16 id; u8 push}`, sprite = bank spr + 100), A x 256 (sprite strip paths), A x 4, map W*H u16 (`& 0x3fff` = tile number via the tile-animation remap, 0 = empty), tiles N x 32x24 rgb565, layer1 W*H u16, layer2 W*H u32 (low byte = cell type; the map renderer 0x407ba0 skips types 1 and 2), layer3 W*H u32, then 0x30000 and 0x9000 bytes of tables; that is the end of the file (checked on all 36 levels). Cells are 32x24 px, so a level is 4096x2880 px. |
 | `.TGA` | done | 640×480 24-bit RLE TGA: the overview map (Tab) |
 | `.TGB` | done | 640×480 32-bit RLE TGA: the level briefing picture |
 | `.TIM` | partial | 3 × u32: par times for the gold/silver/bronze ratings (e.g. 28800, 10800, 5400; unit TBD) |
 | `.SLF` | done | Text sound list: `NNN Name \t\t data\sound\W01Level01\File` (ids → WAV in `Sound.xp`) |
-| `.POS` | TBD | Object placements (starts with a count, then a 52-byte block with `0xCD` fill) |
+| `.POS` | done | Animated-object placements, read by 0x402a90: a 0x38-byte header (u32 count first), then count x 56-byte records `{i32 id, u32 flags (bit 31 = shadow), ?, dir, countdown, move, i32 param[8]}`; `id` matches a BLO table-B placement |
 | `.NPF` | TBD | Offset table + small records (paths / waypoints?) |
 | `.SPC` | TBD | 4608 bytes in every level: fixed-size table (special cells?) |
-| `.ANM` | TBD | Offset table + records: tile animations |
+| `.ANM` | done | Animations (0x401240; also `Data\Players\Player.anm`, `Data\Sheep\Sheep.anm`, `Data\GUI\Pickup.anm`): `{u32 count, u32 size, u32 offsets[count]}`; an animation is `{u32 nframes, ?, u32 frame offsets[]}`; a frame is a command list: 1/4 = sprite (bank, +0x100 for 4; 9 direction frames, pause byte at +11; 12 bytes; direction >= 9 is drawn mirrored as 16 - dir), 2 = loop mode (2 bytes), 3 = sound (mode 2 draws `crt_rand`; 9 bytes), 0 = end |
 | `.REC` | TBD | Demo recordings (attract mode, "Load A Recording", "RECORD"). Not every level has one. Usable as a replay oracle for the simulation |
 
 ## Other files

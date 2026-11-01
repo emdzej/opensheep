@@ -80,11 +80,25 @@ bool sprite_frame(int bank, int frame, SprFrame *out)
     return true;
 }
 
+bool sprite_frame_ids(int bank, int frame, int *group, int *index)
+{
+    if (frame < 0 || frame >= sprite_frames(bank)) return false;
+    const uint8_t *e = banks[bank] + 0x2c + 8 * frame;
+    *group = rd16(e + 4);
+    *index = rd16(e + 6);
+    return true;
+}
+
 void sprite_target(Framebuffer *fb) { target = fb; }
 
 void sprite_clip(int x0, int y0, int x1, int y1)
 {
     clip_x0 = x0; clip_y0 = y0; clip_x1 = x1; clip_y1 = y1;
+}
+
+void sprite_get_clip(int *x0, int *y0, int *x1, int *y1)
+{
+    *x0 = clip_x0; *y0 = clip_y0; *x1 = clip_x1; *y1 = clip_y1;
 }
 
 void sprite_tint(int flags) { tint = flags; }

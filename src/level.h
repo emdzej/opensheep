@@ -29,6 +29,8 @@ typedef struct {
     uint32_t *cells;                /* 0x4a20a0: w * h u32, low byte = cell type */
     uint32_t *layer3;               /* 0x4a1ea8: w * h u32 */
     uint8_t *tab1, *tab2;           /* 0x4a1ed8 (0x18000 + 0x4800), 0x4a2094 */
+    uint8_t *objects;               /* 0x4a2098: table B, 20-byte object placements */
+    int nobjects;                   /* 0x4a20ac */
     uint8_t *banks;                 /* 0x4a1ee4: table A, 256-byte sprite strip paths */
     int nbanks;                     /* 0x4a20c0 */
     uint8_t *anim_frames;           /* 0x4a209c entries of 32 bytes (DAT_004a209c = count at +0x1c) */

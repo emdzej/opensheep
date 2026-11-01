@@ -75,6 +75,22 @@ row is clipped with a source rectangle. Cells whose type (low byte of the u32 la
 not drawn. The menu level has no bounds: `Menu_SetPage` (0x427870) sets a 640x480 page from a
 table at 0x450c48.
 
+## Objects and the level frame
+
+Static objects: 1024 x 0x78 at 0x47e070; animated objects: 512 x 0x10c at 0x459078 (slots from 40);
+an id -> slot map at 0x47a878 (`| 0x8000` = static). Both carry a 0x58-byte draw record. The level
+frame (0x40b9b0) ticks 0x4056f0, 0x408ca0, 0x40b870, the player 0x415f10, the sheep 0x41caf0, the
+camera, the level hook, objects 0x402700 and 0x403890, then draws the map, the player
+(0x40bec0/0x417070), the sheep 0x41e6d0, objects 0x402830, hook +0x1c, the sorted pass 0x40c1f0,
+hook +0x20, 0x4181d0 and 0x40b590.
+
+Sorted pass 0x40c1f0 (`src/render.c`): records go into 23 rows x 4 layers of buckets (cap 0x7e) by
+mode (0/4 foot y, 1 the cell mask row 0x40c700, 2 last row, 3 first row) after the push adjust
+0x40c070, are bubble-sorted by depth + height, and each row draws its sprites, then that row's
+foreground cells (types 1-2 whole via 0x408180, >= 3 through the 32x24 per-type mask at `tab2 +
+(type-1)*0x300` via 0x408630), then 2-3 extra rows below the screen. Record kinds: 7 shadow
+(sheared), 1-5 sprite (2 scaled by the exe value at 0x44b3a0), 6 text.
+
 ## Simulation state
 
 - Player (shepherd) struct at `0x4b9788`; sheep: 30 slots of `0x124` bytes at `0x4b99c0`.

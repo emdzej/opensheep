@@ -28,10 +28,13 @@ void sprite_banks_free_all(void);
 /* Frames in a bank (0 if not loaded); frame info (false if out of range). */
 int sprite_frames(int bank);
 bool sprite_frame(int bank, int frame, SprFrame *out);
+/* The frame table's u16 group and index of a frame. */
+bool sprite_frame_ids(int bank, int frame, int *group, int *index);
 
 /* The draw target and the clip window (0x66b5d0/0x66b5d4 and 0x4bc8f0 / 0x4bc8f4 / 0x44d4b0 / 0x44d4b4). */
 void sprite_target(Framebuffer *fb);
 void sprite_clip(int x0, int y0, int x1, int y1);
+void sprite_get_clip(int *x0, int *y0, int *x1, int *y1);
 /* Tint flags 0x4bc8f8: bit 0 halves red, bit 1 green, bit 2 blue. */
 void sprite_tint(int flags);
 

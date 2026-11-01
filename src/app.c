@@ -3,6 +3,8 @@
 #include "app.h"
 #include "exe.h"
 #include "level.h"
+#include "objects.h"
+#include "render.h"
 #include "platform.h"
 #include "sprites.h"
 #include "world.h"
@@ -31,6 +33,8 @@ static bool load(int world, int level)
     sprite_bank_load_misc(SPR_BANK_TEXT_YELLOW, "TextYellow.spr");
     sprite_bank_load_misc(SPR_BANK_TEXT_BLUE, "TextBlue.spr");
     fprintf(stderr, "sprite banks: %d of %d\n", nb, g_lv.nbanks);
+    anims_load(world_level_path(".anm"));
+    objects_load(world_level_path(".pos"));
     view_x = g_lv.cam_min_x;
     view_y = g_lv.cam_min_y;
     level_set_camera(view_x, view_y);
@@ -108,7 +112,11 @@ bool app_frame(void)
     view_y = g_lv.cam_y;
     Framebuffer *fb = plat_fb();
     memset(fb->pixels, 0, (size_t)fb->pitch * fb->h * 2);
+    objects_update();
     level_draw_map(fb);
+    draw_list_reset();
+    objects_collect();
+    render_sorted(fb);
     if (gallery) draw_gallery(fb);
     plat_present();
     return true;
