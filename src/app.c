@@ -142,6 +142,8 @@ static bool frame(void)
         uint32_t buttons = 0;
         plat_mouse(&mx, &my, &dx, &dy, &buttons);
         g_mouse_button = buttons & 1;
+        /* the mouse control reads relative motion: the pointer captured while a level is played with it */
+        plat_mouse_capture(g_input_mode == 0 && !movie_active() && g_world != 0 && g_level != 0 && !g_paused);
         Framebuffer *fb = plat_fb();
         bool on = true;
         /* the main loop (0x438350): a movie plays in place of App_Frame. The frame that starts one

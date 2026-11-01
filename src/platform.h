@@ -1,7 +1,7 @@
 /* Platform contract: everything the portable game core needs from the host. The core (every file in
    src/ except the backends) includes no platform headers; a backend implements the functions below and
    drives the app (app.h). Backend: platform_gasm.c (gasm). The tests supply their own pieces
-   (vfs_host.c, storage_file.c, joystick_none.c).
+   (vfs_host.c, storage_file.c, input_none.c).
 
    A backend's job, in order:
    1. Mount the game data (vfs.h): a directory, a disc image, or a VfsSource over host-provided bytes.
@@ -46,6 +46,10 @@ int plat_key_presses(int *keys, int cap);
 /* Mouse: position in framebuffer pixels, buttons bit 0 left, bit 1 right, bit 2 middle; relative
    motion since the previous poll. false if there is no mouse. */
 bool plat_mouse(int *x, int *y, int *dx, int *dy, uint32_t *buttons);
+/* Capture the pointer (hidden, locked, relative motion unbounded by the window) for the mouse control,
+   which reads DirectInput's relative motion; false gives it back. Best effort (a browser needs a
+   click first). */
+void plat_mouse_capture(bool on);
 /* Buttons held on virtual pad 0..3 (gasm layout), and the left stick in [-32768, 32767]. */
 enum {
     PAD_A = 1 << 0, PAD_B = 1 << 1, PAD_X = 1 << 2, PAD_Y = 1 << 3, PAD_L = 1 << 4, PAD_R = 1 << 5,

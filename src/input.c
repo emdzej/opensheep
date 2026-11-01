@@ -6,6 +6,7 @@
 #include "platform.h"
 #include "player.h"
 #include <math.h>
+#include <stdio.h>
 
 uint8_t g_keydown[256];
 int8_t g_keyheld[256];
@@ -60,7 +61,9 @@ static int8_t held(uint32_t cfg) { return g_keyheld[exe_u32(cfg) & 0xff]; }
 
 void input_map(void)
 {
-    /* 0x408ca0: the pad read with a pad chosen (the mouse, 0x405640, TODO); its button 3 also acts */
+    /* 0x408ca0: 0x405610 (the buttons' previous state into 0x4a1cf0, which nothing reads), the
+       mouse, the pad with a pad chosen; the pad's button 3 also acts */
+    mouse_read();
     if (g_input_mode == 2 || g_input_mode == 3) pad_read();
     if (!(g_pad_buttons & 4)) pad_held = 0;
     else if (pad_held < 60) pad_held++;
@@ -101,6 +104,18 @@ void input_pad_keys(void)
     } else if ((g_pad_buttons & 1) == 0) {
         latch[4] = 0;
     }
+}
+
+void mouse_read(void)
+{
+    /* (and a cursor kept in 0..640 x 0..480, 0x4a3e9c / 0x4a3d8c, which nothing reads) */
+    int x, y, dx = 0, dy = 0;
+    uint32_t b = 0;
+    if (!plat_mouse(&x, &y, &dx, &dy, &b)) dx = dy = 0, b = 0;
+    g_mouse_dx = dx;
+    g_mouse_dy = dy;
+    g_run = (b & 1) != 0;
+    g_creep = (b & 2) != 0;
 }
 
 void pad_read(void)

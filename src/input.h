@@ -21,6 +21,9 @@ void input_read(int (*is_down)(int key));
 void input_keys_tick(void);
 /* 0x408ca0 (keyboard part): the shepherd's controls from the configured keys (0x44ad4c..). */
 void input_map(void);
+/* 0x405640: the mouse, DirectInput's relative motion (g_mouse_dx / g_mouse_dy); its left button runs,
+   the right creeps. */
+void mouse_read(void);
 /* 0x422760: the pad (g_pad_x / g_pad_y -1000..1000, g_pad_buttons), from plat_joystick. */
 void pad_read(void);
 /* 0x410330: the pad's stick and buttons as presses of the arrow keys and space (the bonus races). */

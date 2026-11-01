@@ -174,6 +174,14 @@ int plat_key_presses(int *out, int cap)
 
 static float ptr_f32(int off) { float f; memcpy(&f, ptr + off, 4); return f; }
 
+void plat_mouse_capture(bool on)
+{
+    static bool captured;
+    if (on == captured) return;
+    captured = on;
+    gasm_input_mode(GASM_INPUT_KEYS_RAW | (on ? GASM_INPUT_POINTER_HIDDEN | GASM_INPUT_POINTER_LOCKED : 0));
+}
+
 bool plat_mouse(int *x, int *y, int *dx, int *dy, uint32_t *buttons)
 {
     if (!have_ptr) return false;

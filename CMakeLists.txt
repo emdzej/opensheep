@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 11)
 # The portable core: everything except the host backends. The native build has no platform library at
 # all (tests and tools only); the game itself is the gasm build of the same file list.
 file(GLOB CORE_SRC src/*.c src/game/*.c)
-set(HOST_SRC src/vfs_host.c src/storage_file.c src/joystick_none.c)
+set(HOST_SRC src/vfs_host.c src/storage_file.c src/input_none.c)
 foreach(f ${HOST_SRC} src/platform_gasm.c)
   list(REMOVE_ITEM CORE_SRC "${CMAKE_SOURCE_DIR}/${f}")
 endforeach()
