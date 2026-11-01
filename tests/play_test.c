@@ -4,6 +4,7 @@
 #include "level.h"
 #include "moves.h"
 #include "play.h"
+#include "rng.h"
 #include "sheep.h"
 #include "vfs_host.h"
 #include "world.h"
@@ -15,6 +16,7 @@ static int fails;
 
 static void start(void)
 {
+    rng_init();
     game_new();
     if (!world_select(1, 1) || !level_load_resources()) { printf("cannot load 1.1\n"); exit(1); }
     level_start();

@@ -10,6 +10,7 @@
 #include "player.h"
 #include "sheep.h"
 #include "render.h"
+#include "rng.h"
 #include "platform.h"
 #include "sprites.h"
 #include "world.h"
@@ -74,6 +75,7 @@ bool app_init(int argc, char **argv)
         if (!strcmp(argv[i], "--level") && i + 1 < argc) sscanf(argv[++i], "%d.%d", &world, &level);
         else if (!strcmp(argv[i], "--view")) viewer = true;
         else if (!strcmp(argv[i], "--trace")) trace = true;
+    rng_init();                         /* 0x408930, the start-up, fills the table once */
     game_new();
     g_input_mode = 1;
     if (!exe_load()) { plat_error("OpenSheep", exe_error()); return false; }
