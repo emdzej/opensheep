@@ -203,10 +203,66 @@ static void bucket_add(int row, int layer, int idx)
     if (buckets[b][0] < SLOT_MAX) buckets[b][++buckets[b][0]] = idx;
 }
 
+/* 0x40cf20: n in at most width digits (the highest dropped), no leading zeros, left-aligned in
+   spaces; a minus takes one of them. */
+static void number_text(int n, int width, char out[16])
+{
+    memset(out, ' ', 12);
+    int neg = n < 0, at = neg;
+    /* (0 - n in unsigned: the original negates INT_MIN to itself) */
+    uint32_t v = neg ? 0u - (uint32_t)n : (uint32_t)n;
+    if (neg) {
+        width--;
+        out[0] = '-';
+    }
+    bool started = false;
+    uint32_t p = 10000000;
+    for (int left = 8; p != 1; left--, p /= 10) {
+        uint32_t d = v / p;
+        v %= p;
+        if (d != 0) started = true;
+        /* a digit past ten (v over 99999999) shows as the character after '9', as in the original */
+        if (left <= width && started && at < 11) out[at++] = (char)('0' + d);
+    }
+    out[at < 11 ? at : 11] = (char)('0' + v);
+    int end = width + neg;
+    out[end < 0 ? 0 : end < 12 ? end : 12] = 0;
+}
+
+/* 0x405730: text in the exe's 8x16 font (0x44d558, 0x80 bytes a character; small: every other row),
+   colour c where the font is set, the rest left (transparent), clipped to the screen. */
+static void font_text(Framebuffer *fb, const char *s, int x, int y, uint16_t c, bool small)
+{
+    if (!fb) return;
+    for (; *s; s++, x += 8) {
+        int ch = (uint8_t)*s - 0x20;
+        if (ch < 0 || ch >= 0x60) continue;                /* (the original reads outside the font) */
+        uint32_t g = 0x44d558 + 0x80 * (uint32_t)ch;
+        for (int r = 0; r < (small ? 8 : 16); r++) {
+            int py = y + r;
+            uint32_t row = g + 8 * (uint32_t)(small ? 2 * r : r);
+            for (int i = 0; i < 8; i++) {
+                int px = x + i;
+                if (px < 0 || px >= 640 || py < 0 || py >= 480 || px >= fb->w || py >= fb->h) continue;
+                if (exe_u8(row + (uint32_t)i)) fb->pixels[(size_t)py * (size_t)fb->pitch + (size_t)px] = c;
+            }
+        }
+    }
+}
+
 /* 0x40c870 */
 static void draw_rec(DrawRec *p)
 {
-    if (p->kind == 6) return;                              /* TODO: score text (0x40cf20, 0x405730) */
+    if (p->kind == 6) {
+        /* a number (frame) w / 8 digits wide, its shadow in 0x4a1e78 (0) and itself in 0x44ad5c
+           (0x7fff), both as 0x408930 sets them */
+        char t[16];
+        number_text((int32_t)p->frame, (p->w + (p->w >> 31 & 7)) >> 3, t);
+        Framebuffer *fb = sprite_get_target();
+        font_text(fb, t, p->x + 1, p->y + 1, 0, p->h == 8);
+        font_text(fb, t, p->x, p->y, 0x7fff, p->h == 8);
+        return;
+    }
     if (p->kind == 7)
         sprite_draw(p->x, p->shadow_dy + p->y, p->bank, p->frame | SPR_SHEAR, p->scale_x, p->scale_y);
     if (p->kind < 1 || p->kind >= 6) return;
