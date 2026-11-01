@@ -38,6 +38,13 @@ static int16_t rd16(const uint8_t *q, int off)
     return v;
 }
 
+void path_point(int p, int i, int *x, int *y)
+{
+    const uint8_t *q = npf ? point(p, i) : NULL;
+    *x = q ? rd16(q, 4) : 0;
+    *y = q ? rd16(q, 6) : 0;
+}
+
 void path_start(int p)
 {
     const uint8_t *q = npf ? point(p, 0) : NULL;

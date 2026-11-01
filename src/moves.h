@@ -15,6 +15,8 @@ extern int g_hint_shown;                /* 0x4b9754 (the hint's line list; non-z
 extern int g_hint_x, g_hint_y;          /* 0x4b970c, 0x4b9710 */
 extern int g_hint;                      /* the number passed to 0x411a70 */
 extern int g_switch_wait[32];           /* 0x4b9680: Move_14 per-actor cooldown */
+extern int g_carry_time;                /* 0x4b9714: set by Move_06 (no reader found yet) */
+extern AnimObj *g_carry_obj;            /* 0x4b9718 */
 
 /* 0x402700's dispatch: a->move n runs standard routine n, n | 0x8000 the level's routine n. */
 void move_run(AnimObj *a);
