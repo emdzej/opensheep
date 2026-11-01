@@ -17,6 +17,7 @@
 #include "objects.h"
 #include "play.h"
 #include "player.h"
+#include "save.h"
 #include "sheep.h"
 #include "sound.h"
 #include "render.h"
@@ -100,6 +101,8 @@ bool app_init(int argc, char **argv)
     for (int i = 1; i + 1 < argc; i++)
         if (!strcmp(argv[i], "--ini")) ini_parse(argv[i + 1], strlen(argv[i + 1]));
     xp_mount("main.xp");
+    /* 0x40d380, from 0x408930 (not for --level / --view, which keep their fixed defaults) */
+    if (front_end && !viewer) settings_load();
     hiscores_init();                    /* 0x408990 */
     if (!strings_load()) fprintf(stderr, "no GameStrings\n");
     if (!fonts_load()) fprintf(stderr, "no fonts\n");
@@ -216,6 +219,8 @@ bool app_frame(void)
 
 void app_exit(void)
 {
+    /* 0x438350 after its loop: the settings back to the registry */
+    if (front_end && !viewer) settings_save();
     level_release();
     plat_shutdown();
 }

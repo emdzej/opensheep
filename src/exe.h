@@ -35,6 +35,7 @@ uint8_t exe_u8(uint32_t va);
 int8_t exe_s8(uint32_t va);
 int16_t exe_s16(uint32_t va);
 float exe_f32(uint32_t va);
+double exe_f64(uint32_t va);
 const char *exe_str(uint32_t va);                 /* NUL-terminated string inside the image ("" if none) */
 /* UTF-16LE string at va, narrowed to ASCII ('?' for anything else) into dst; returns dst. */
 char *exe_wstr(uint32_t va, char *dst, size_t cap);

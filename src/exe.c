@@ -130,6 +130,14 @@ int8_t exe_s8(uint32_t va) { return (int8_t)exe_u8(va); }
 int16_t exe_s16(uint32_t va) { return (int16_t)exe_u16(va); }
 float exe_f32(uint32_t va) { uint32_t u = exe_u32(va); float f; memcpy(&f, &u, 4); return f; }
 
+double exe_f64(uint32_t va)
+{
+    uint64_t u = (uint64_t)exe_u32(va) | (uint64_t)exe_u32(va + 4) << 32;
+    double d;
+    memcpy(&d, &u, 8);
+    return d;
+}
+
 const char *exe_str(uint32_t va)
 {
     if (!exe_contains(va, 1)) return "";

@@ -26,3 +26,9 @@ typedef struct {
     uint16_t name[12];
 } HiScore;
 extern HiScore g_hiscores[50];
+
+/* The registry values under SOFTWARE\Empire Interactive\Sheep (0x422a00 / 0x422a80), one storage
+   key each (the value's name, ' ' as '_'): 0x40d380 reads Difficulty, Controller, Sfx Volume and
+   Music Volume at start-up (0x408930), the main loop's exit (0x438350) writes them back. */
+void settings_load(void);
+void settings_save(void);
