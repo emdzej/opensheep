@@ -3,5 +3,5 @@
 #pragma once
 #include "game.h"
 
-/* descriptor +0x18: the shepherd's states >= 100. */
-void level_player_hook(Player *p);
+/* descriptor +0x18: the shepherd's and the sheep's move types >= 100 (an actor: Player or Sheep). */
+void level_actor_hook(int32_t *actor);

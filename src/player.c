@@ -843,7 +843,7 @@ void player_tick(Player *p)
         p->y = (float)((double)p->y - (double)g_cos[p->push_dir * 16] * (double)a->speed);
     }
     if (p->state >= 100) {
-        level_player_hook(p);
+        level_actor_hook(p->d);
         goto tail;
     }
     switch (p->state) {

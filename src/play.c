@@ -91,6 +91,7 @@ void level_start(void)
         anim_init(2, i, 0, d / 16);
     }
     g_saved = 0;
+    g_sheep_out = 0;
     g_end = 0;
     player_init(&g_player);
     memset(g_chain, 0, sizeof g_chain);
@@ -167,7 +168,7 @@ void play_tick(void)
 {
     for (int i = 0; i < MAX_SPECIAL; i++) g_special[i].count = 0;
     if (!g_level_over) player_tick(&g_player);
-    /* TODO: the flock (0x41caf0) */
+    if (g_world != 7) sheep_tick();
     camera_update(&g_player);
     /* TODO: the level's tick hook (descriptor +0x10) */
     objects_update();
@@ -179,7 +180,7 @@ void play_draw(Framebuffer *fb)
     level_draw_map(fb);
     cursor_collect(&g_player);
     player_collect(&g_player);
-    /* TODO: the flock's draw records (0x41e6d0) */
+    sheep_collect();
     objects_collect();
     render_sorted(fb);
 }

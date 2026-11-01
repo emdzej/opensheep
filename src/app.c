@@ -7,6 +7,7 @@
 #include "objects.h"
 #include "play.h"
 #include "player.h"
+#include "sheep.h"
 #include "render.h"
 #include "platform.h"
 #include "sprites.h"
@@ -16,7 +17,8 @@
 #include <string.h>
 
 static int view_x, view_y;
-static bool gallery, viewer;
+static bool gallery, viewer, trace;
+static int ticks;
 static int gallery_bank = SPR_BANK_LEVEL;
 
 static bool load(int world, int level)
@@ -70,6 +72,7 @@ bool app_init(int argc, char **argv)
     for (int i = 1; i < argc; i++)
         if (!strcmp(argv[i], "--level") && i + 1 < argc) sscanf(argv[++i], "%d.%d", &world, &level);
         else if (!strcmp(argv[i], "--view")) viewer = true;
+        else if (!strcmp(argv[i], "--trace")) trace = true;
     game_new();
     g_input_mode = 1;
     if (!exe_load()) { plat_error("OpenSheep", exe_error()); return false; }
@@ -119,6 +122,13 @@ bool app_frame(void)
         g_key_creep = plat_key_down(KEY_LCTRL) || plat_key_down(KEY_RCTRL);
         g_action = plat_key_down(KEY_SPACE) ? (g_action ? 2 : 1) : 0;
         play_tick();
+        if (trace && ++ticks % 30 == 0) {
+            fprintf(stderr, "t%d shepherd %d,%d st %d | saved %d out %d |", ticks, g_player.ix, g_player.iy,
+                    g_player.state, g_saved, g_sheep_out);
+            for (int i = 0; i < g_nsheep; i++)
+                fprintf(stderr, " %d,%d/%d", g_sheep[i].ix, g_sheep[i].iy, g_sheep[i].state);
+            fprintf(stderr, "\n");
+        }
         Framebuffer *fb = plat_fb();
         memset(fb->pixels, 0, (size_t)fb->pitch * fb->h * 2);
         play_draw(fb);

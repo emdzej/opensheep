@@ -12,12 +12,12 @@ static void unported(const char *what, uint32_t va)
     fprintf(stderr, "level %s hook 0x%x not ported\n", what, va);
 }
 
-void level_player_hook(Player *p)
+void level_actor_hook(int32_t *actor)
 {
-    (void)p;
+    (void)actor;
     uint32_t va = desc_u32(DESC_PLAYER);
     if (!va) return;
     switch (va) {
-    default: unported("player", va); break;
+    default: unported("actor", va); break;
     }
 }
