@@ -17,7 +17,12 @@ _Static_assert(sizeof(StaticObj) == 0x78, "StaticObj layout");
 _Static_assert(sizeof(AnimObj) == 0x10c, "AnimObj layout");
 
 StaticObj g_static[MAX_STATIC];
-AnimObj g_anim[MAX_ANIM];
+/* 0x459078, with a record in front: code that looks up an object whose id is gone (g_obj_by_id -1, e.g.
+   a hurdle's star once taken, 0x41ac20) reads and writes g_anim[-1]. In the original that is
+   0x458f6c..0x459077, unused .data (the C runtime's constants end at 0x458da0), so those accesses are
+   harmless there; here they land in the spare record. */
+static AnimObj anim_mem[1 + MAX_ANIM];
+AnimObj *const g_anim = anim_mem + 1;
 int g_static_hi, g_anim_hi;
 int g_obj_by_id[MAX_OBJ_ID];
 int g_loading;
@@ -394,7 +399,7 @@ void objects_load(const char *pos_path)
     pos_buf = NULL;
     pos_len = 0;
     memset(g_static, 0, sizeof g_static);
-    memset(g_anim, 0, sizeof g_anim);
+    memset(g_anim, 0, MAX_ANIM * sizeof *g_anim);   /* not the spare record, as the original */
     for (int i = 0; i < MAX_STATIC; i++) g_static[i].state = -1;
     for (int i = 0; i < MAX_ANIM; i++) g_anim[i].type = -1;
     g_static_count = g_anim_count = 0;

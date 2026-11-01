@@ -78,7 +78,7 @@ enum {
 };
 
 extern StaticObj g_static[MAX_STATIC];
-extern AnimObj g_anim[MAX_ANIM];
+extern AnimObj *const g_anim;            /* MAX_ANIM records; g_anim[-1] is a spare (objects.c) */
 extern int g_static_hi, g_anim_hi;       /* 0x49c07c, 0x49f894: highest used slot + 1 */
 extern int g_obj_by_id[MAX_OBJ_ID];      /* 0x47a878: slot, | 0x8000 for a static object */
 extern int g_loading;                    /* 0x4a10c0 */

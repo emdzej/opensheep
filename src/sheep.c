@@ -977,8 +977,8 @@ static void sheep_jump(Sheep *a, int n)
     a->x = (float)((double)g_sin[a->dir] * (double)a->speed + (double)a->x);
     o->fy = (float)((double)o->fy - (double)g_cos[a->dir] * (double)a->speed);
     o->d[0x15] += ftol((double)a->speed * -10.0);
-    int t = (o->d[0x15] << 8) / o->d[0x16];
-    double h = (double)o->fy - (double)(float)o->d[0x18] * (double)g_sin[t / 2];
+    int t = o->d[0x15] * 256 / o->d[0x16];
+    double h = (double)o->fy - (double)(float)o->d[0x18] * (double)arc_sin(t);
     a->y = (float)h;
     o->rec.shadow_dy = ftol((double)o->fy - h);
     if (o->d[0x19] == 0) {
@@ -1030,8 +1030,8 @@ void sheep_knocked(Sheep *a, int n)
     o->fy = (float)((double)o->fy - (double)g_cos[a->dir] * (double)a->speed);
     a->anim[1] = a->anim[2] = 2;
     o->d[0x15] += ftol((double)a->speed * -10.0);
-    int t = (o->d[0x15] << 8) / o->d[0x16];
-    double h = (double)o->fy - (double)(float)o->d[0x18] * (double)g_sin[t / 2];
+    int t = o->d[0x15] * 256 / o->d[0x16];
+    double h = (double)o->fy - (double)(float)o->d[0x18] * (double)arc_sin(t);
     a->y = (float)h;
     o->rec.shadow_dy = ftol((double)o->fy - h);
     if (o->d[0x19] == 0) {

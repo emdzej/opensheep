@@ -759,8 +759,8 @@ static int arc(Player *p, AnimObj *a)
 static int arc_height(Player *p, AnimObj *a)
 {
     a->d[0x15] += ftol((double)p->speed * -10.0);
-    int t = (a->d[0x15] << 8) / a->d[0x16];
-    double h = (double)a->fy - (double)a->d[0x18] * (double)g_sin[t / 2];
+    int t = a->d[0x15] * 256 / a->d[0x16];
+    double h = (double)a->fy - (double)a->d[0x18] * (double)arc_sin(t);
     p->y = (float)h;
     a->rec.shadow_dy = ftol((double)a->fy - h);
     return t;

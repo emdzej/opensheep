@@ -19,6 +19,10 @@ static inline int32_t ftol(double v)
 
 /* ---------------------------------------------------------------- tables (0x401420, 0x40b070) */
 extern float g_sin[256], g_cos[256];        /* 0x47d75c, 0x4a10c4: direction 0 = up, clockwise */
+/* g_sin[t / 2] for a jump's height (t = 256 * time left / duration). On the landing tick t is below
+   zero and the original reads before the table: the end of the draw list (0x47c7bc, entries 996..999),
+   null or a pointer, 0 as a float to within 1e-38. */
+static inline float arc_sin(int t) { return t / 2 < 0 ? 0.0f : g_sin[t / 2]; }
 extern int32_t g_isin[256], g_icos[256];    /* 0x47db68, 0x4a14c4: x 32768 */
 extern int32_t g_icos_y[256];               /* 0x49f9ac: g_icos * 24 / 32 */
 extern float g_cos_y[256];                  /* 0x49fdb0: cos * 24 * 0.03125 */
