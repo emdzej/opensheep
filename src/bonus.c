@@ -1,5 +1,7 @@
 #include "levels_int.h"
+#include "input.h"
 #include <stdlib.h>
+#include <string.h>
 
 /* The bonus levels (x.5): their descriptor hooks and routines. */
 
@@ -341,12 +343,202 @@ static void lv15_move_02(AnimObj *a)
     }
 }
 
+/* ================================================================ 2.5: the sack race */
+
+/* Sheep 0-3 hop along paths 1-4 (sheep 0 the shepherd's, as fast as keys are hit: one press a tick
+   over the last 256 ticks; the others in random spurts); specials (0x18) mark hurdles and bridges. */
+static int race_state;            /* 0x6629ac: 0 the count-down, 1 the race */
+static int count_ticks;           /* 0x6629b0 */
+static int count;                 /* 0x6629b4: the count-down shown (0x10e + n), -1 gone */
+static int finished;              /* 0x662abc */
+static uint8_t presses[256];      /* 0x6629b8 */
+static int press_i;               /* 0x662ac0 */
+
+static void lv25_init(void)
+{
+    /* 0x42a920 */
+    for (int i = 0; i < 4; i++) {
+        Sheep *s = &g_sheep[i];
+        AnimObj *o = &g_anim[i];
+        actor_set_state(s->d, 100);
+        s->dir = 0x40;
+        s->face = 0x40;
+        anim_set(i, 0x1b, 4);
+        path_begin(o, i + 1, 0, 1);
+        s->kind = 6;
+        o->countdown = crt_rand() & 0x1f;
+        o->d[0x1d] = o->d[0x1e] = o->d[0x1f] = 1;
+    }
+    g_anim[0].type = 4;
+    anim_set(0, 1, 4);
+    for (int i = 4; i < MAX_SHEEP; i++) sheep_out(i);
+    memset(presses, 0, sizeof presses);
+    g_anim[PLAYER_SLOT].rec.scale_x = 0;
+    g_anim[PLAYER_SLOT].rec.scale_y = 0;
+    race_state = 0;
+    count = 0;
+    count_ticks = 0;
+    g_timer_on = 0;
+    g_player.state = 4;
+    g_player.x = g_sheep[0].x;
+    g_player.y = g_sheep[0].y;
+    g_anim[PLAYER_SLOT].rec.shadow = -1;
+    g_hud_style = 2;
+}
+
+static void lv25_tick(void)
+{
+    /* 0x42aa30: three seconds of count-down ("go" at the third), then the race until all four are
+       in; the shepherd's sheep's place scores */
+    if (race_state == 1) {
+        if (finished != 4) return;
+        switch (g_anim[0].d[0x19]) {
+        case 1: g_score = 10000; break;
+        case 2: g_score = 5000; break;
+        case 3: g_score = 1000; break;
+        case 4: g_score = 0; break;
+        }
+        g_end = 7;
+        return;
+    }
+    if (race_state != 0 || ++count_ticks <= 0x3c) return;
+    count_ticks = 0;
+    if (++count == 2) {
+        g_timer_on = 1;
+        finished = 0;
+        for (int i = 0; i < 4; i++) g_anim[i].sub = 2;
+    } else if (count >= 3) {
+        count = -1;
+        race_state = 1;
+    }
+}
+
+static void lv25_hop_player(int32_t *a)
+{
+    /* 0x42ab60 */
+    input_pad_keys();
+    int sum = 0;
+    for (int i = 0; i < 256; i++) sum += g_keyheld[i];
+    presses[press_i] = sum == 1;
+    press_i = (press_i + 1) & 0xff;
+    int n = 0;
+    for (int i = 0; i < 256; i++) n += presses[i] != 0;
+    float *f = (float *)a;
+    f[1] = (float)((double)n * (double)4.0f * (double)0.0285714287f);
+    if (f[1] > 4.0f) f[1] = 4.0f;
+}
+
+static void lv25_hop_ai(int32_t *a, AnimObj *o)
+{
+    /* 0x42abf0: slowing by 0.05 a tick, every 5-12 ticks a push of 0.5 */
+    float *f = (float *)a;
+    int t = o->d[0x15];
+    o->d[0x15] = t - 1;
+    if (t > 0) {
+        f[1] = (float)((double)f[1] - (double)0.05f);
+        if (f[1] < 0.0f) f[1] = 0;
+        return;
+    }
+    f[1] = (float)((double)f[1] + 0.5);
+    if (f[1] > 4.0f) f[1] = 4.0f;
+    o->d[0x15] = (crt_rand() & 7) + 5;
+}
+
+static void lv25_actor(int32_t *a)
+{
+    /* 0x42ac60: state 100, a racer: speed steps along its path a tick; special 0x18's value is
+       1 a hurdle (a 0x28 px jump over 0xa0), 2 / 3 under / over a bridge (draw mode, layer,
+       sorted), 4-7 the tall hurdle object 0x89 + n knocked (0x50 px over 0x15e) */
+    if (a[3] != 100) return;
+    Sheep *s = (Sheep *)a;
+    AnimObj *o = &g_anim[a[9]];
+    int32_t *d = o->d;
+    switch (o->sub) {
+    case 0:
+        o->sub = 1;
+        break;
+    case 2: {
+        if (a[9] == 0) lv25_hop_player(a);
+        else lv25_hop_ai(a, o);
+        for (int n = ftol((double)s->speed); n > 0; n--) {
+            if (path_follow(o)) {
+                o->sub = 5;
+                d[0x19] = ++finished;
+                if (a[9] == 0) g_timer_on = 0;
+                break;
+            }
+        }
+        s->u18 = 0;
+        sheep_specials(ftol((double)s->x), ftol((double)s->y), s, 1);
+        switch (s->u18) {
+        case 1:
+            d[0x16] = 0xa0;
+            d[0x17] = 0;
+            d[0x18] = 0x28;
+            o->sub = 3;
+            break;
+        case 2:
+            d[0x1d] = 2;
+            d[0x1e] = 0;
+            d[0x1f] = 1;
+            break;
+        case 3:
+            d[0x1d] = d[0x1e] = d[0x1f] = 1;
+            break;
+        case 4: case 5: case 6: case 7: {
+            AnimObj *h = obj(0x89 + s->u18);   /* the original takes the slot unchecked */
+            if (h) anim_set(h->slot, 0, -1);
+            d[0x16] = 0x15e;
+            d[0x17] = 0;
+            d[0x18] = 0x50;
+            o->sub = 3;
+            break;
+        }
+        }
+        if (o->frame == 1 && o->prev_frame != 1) sound_play_at(o, (int)(rng_next() & 6) + 2, 0, 0);
+        break;
+    }
+    case 3: {
+        for (int i = 0; i < 3; i++) path_follow(o);
+        d[0x17] += 4;
+        int k = (d[0x17] << 7) / d[0x16];
+        int h = ftol((double)(float)d[0x18] * (double)g_sin[k]);
+        o->rec.shadow_dy = h;
+        o->y -= h;
+        if (d[0x17] >= d[0x16]) {
+            o->rec.shadow_dy = 0;
+            o->sub = 2;
+        }
+        break;
+    }
+    }
+    s->x = (float)o->x;
+    s->y = (float)o->y;
+    a[0] = a[2] = o->dir << 4;
+    o->depth_off = d[0x1d] == 1 ? 0 : 0x190;
+    o->rec.mode = (uint8_t)d[0x1d];
+    o->rec.layer = (uint8_t)d[0x1e];
+    o->rec.sortable = (uint8_t)d[0x1f];
+    if (a[9] != 0) return;
+    /* the shepherd rides along unseen */
+    g_player.x = s->x;
+    g_player.y = s->y;
+    g_anim[PLAYER_SLOT].rec.scale_x = 0;
+    g_anim[PLAYER_SLOT].rec.scale_y = 0;
+    g_anim[PLAYER_SLOT].rec.shadow = -1;
+    g_anim[0].anim = 1;
+    g_anim[0].type = 3;
+    a[0xe] = -1;
+    g_player.in_dx = -500;
+}
+
 /* ================================================================ dispatch */
 
 bool bonus_actor(uint32_t va, int32_t *actor)
 {
     switch (va) {
     case 0x423ef0: lv15_actor(actor); return true;
+    case 0x42ac60: lv25_actor(actor); return true;
     default: return false;
     }
 }
@@ -356,6 +548,8 @@ bool bonus_call(uint32_t va)
     switch (va) {
     case 0x423e30: lv15_init(); return true;
     case 0x423e70: lv15_tick(); return true;
+    case 0x42a920: lv25_init(); return true;
+    case 0x42aa30: lv25_tick(); return true;
     default: return false;
     }
 }

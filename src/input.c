@@ -72,3 +72,26 @@ void input_map(void)
     if (g_keyheld[DIK_K]) { g_input_mode = 1; g_pad_buttons = 0; }
     if (g_keyheld[DIK_J]) g_input_mode = 2;
 }
+
+void input_pad_keys(void)
+{
+    /* 0x410330: the pad pushed past 500 (released inside 200) or a button down counts as one more
+       tick on the arrow keys / space */
+    static uint8_t latch[5];   /* 0x4b9628 */
+    static const struct { int axis; int sign; uint8_t key; } map[4] = {
+        { 0, -1, DIK_LEFT }, { 0, 1, DIK_RIGHT }, { 1, -1, DIK_UP }, { 1, 1, DIK_DOWN },
+    };
+    for (int i = 0; i < 4; i++) {
+        int v = (map[i].axis ? g_pad_y : g_pad_x) * map[i].sign;
+        if (!latch[i]) {
+            if (v > 500) { latch[i] = 1; g_keyheld[map[i].key]++; }
+        } else if (v < 200) {
+            latch[i] = 0;
+        }
+    }
+    if (!latch[4]) {
+        if (g_pad_buttons != 0) { latch[4] = 1; g_keyheld[DIK_SPACE]++; }
+    } else if ((g_pad_buttons & 1) == 0) {
+        latch[4] = 0;
+    }
+}

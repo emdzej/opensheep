@@ -20,3 +20,5 @@ void input_read(int (*is_down)(int key));
 void input_keys_tick(void);
 /* 0x408ca0 (keyboard part): the shepherd's controls from the configured keys (0x44ad4c..). */
 void input_map(void);
+/* 0x410330: the pad's stick and buttons as presses of the arrow keys and space (the bonus races). */
+void input_pad_keys(void);
