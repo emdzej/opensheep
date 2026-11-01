@@ -374,7 +374,7 @@ static void trigger(int16_t id, int special, int who)
     g_anim[s].d[0x21] = who;
 }
 
-static void sheep_specials(int x, int y, Sheep *a, int act)
+void sheep_specials(int x, int y, Sheep *a, int act)
 {
     /* 0x41ac20 */
     uint32_t c = g_lv.layer3[(y / TILE_H) * g_lv.w + x / TILE_W];

@@ -309,10 +309,11 @@ static void lv41_move_04(AnimObj *a)
     lv41_push(a);
 }
 
-static void lv41_move_06(AnimObj *a)
+void see_saw(AnimObj *a, int state)
 {
-    /* 0x430010: the see-saw: a sheep on special d15 takes path d16 (0x65); the shepherd stepping on
-       d17 then is thrown at it (move type 1) and both end up in 0x15; 5 s before it works again */
+    /* 0x430010 (and 5.x's 0x431630): the see-saw: a sheep on special d15 takes path d16 (move type
+       state: 0x65 here, 0x67 in world 5); the shepherd stepping on d17 then is thrown at it (move
+       type 1) and both end up in 0x15; 5 s before it works again */
     int32_t *d = a->d;
     int t = d[0x22];
     switch (a->sub) {
@@ -324,7 +325,7 @@ static void lv41_move_06(AnimObj *a)
             d[0x1b] = d[0x21];
             g_anim[w[9]].d[0x23] = d[0x16];
             g_anim[w[9]].d[0x15] = 0;
-            actor_set_state(w, 0x65);
+            actor_set_state(w, state);
             g_special[d[0x15]].type = 5;
             g_special[d[0x17]].type = 2;
             a->sub = 1;
@@ -377,6 +378,8 @@ static void lv41_move_06(AnimObj *a)
     }
     d[0x22] = -1;
 }
+
+static void lv41_move_06(AnimObj *a) { see_saw(a, 0x65); }
 
 static void lv41_move_07(AnimObj *a)
 {

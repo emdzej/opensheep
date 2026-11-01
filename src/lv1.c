@@ -157,29 +157,10 @@ static void lv11_move_05(AnimObj *a)
     }
 }
 
-static float lv11_dist(AnimObj *a)
-{
-    /* 0x42baf0: to the shepherd */
-    double dx = (double)a->x - ftol((double)g_player.x), dy = (double)a->y - ftol((double)g_player.y);
-    double r = sqrt(dy * dy + dx * dx);
-    return (float)(r < 0.0 ? -r : r);
-}
-
 static void lv11_move_08(AnimObj *a)
 {
-    /* 0x42b8a0: Move_03 that calls out (sound 5) when the shepherd comes within 40, then waits
-       150-349 ticks */
-    int32_t *d = a->d;
-    if (a->sub == 0) d[0x1f] = 0;
-    move_03(a);
-    if (d[0x1f] == 0) {
-        if (lv11_dist(a) <= 40.0f) {
-            sound_play_at(a, 5, 0, 0);
-            d[0x1f] = crt_rand() % 200 + 0x96;
-        }
-    } else if (--d[0x1f] == 0) {
-        d[0x1f] = 0;
-    }
+    /* 0x42b8a0: Move_03 that calls out (sound 5) near the shepherd */
+    call_out(a, 5);
 }
 
 static void lv11_move_09(AnimObj *a)

@@ -50,6 +50,34 @@ static inline void map_copy(int sx, int sy, int dx, int dy, int w, int h)
         for (int i = 0; i < w; i++) t[i] = s[i];
 }
 
+static inline float dist_to_player(AnimObj *a)
+{
+    /* 0x42baf0 */
+    double dx = (double)a->x - ftol((double)g_player.x), dy = (double)a->y - ftol((double)g_player.y);
+    double r = sqrt(dy * dy + dx * dx);
+    return (float)(r < 0.0 ? -r : r);
+}
+
+static inline void call_out(AnimObj *a, int sound)
+{
+    /* Lv11_Move_08 and its copies: Move_03 that plays sound when the shepherd comes within 40,
+       then waits 150-349 ticks (d1f) */
+    int32_t *d = a->d;
+    if (a->sub == 0) d[0x1f] = 0;
+    move_03(a);
+    if (d[0x1f] == 0) {
+        if (dist_to_player(a) <= 40.0f) {
+            sound_play_at(a, sound, 0, 0);
+            d[0x1f] = crt_rand() % 200 + 0x96;
+        }
+    } else if (--d[0x1f] == 0) {
+        d[0x1f] = 0;
+    }
+}
+
+/* lv4.c: the see-saw, also world 5's */
+void see_saw(AnimObj *a, int state);
+
 /* Each world's file: its descriptor hooks and routines by address (false / NULL: not its own);
    _call runs a hook without arguments (init, tick, draw, release). */
 bool lv1_actor(uint32_t va, int32_t *actor);
@@ -62,3 +90,5 @@ MoveFn lv3_move(uint32_t va);
 bool lv4_actor(uint32_t va, int32_t *actor);
 bool lv4_call(uint32_t va);
 MoveFn lv4_move(uint32_t va);
+bool lv5_actor(uint32_t va, int32_t *actor);
+MoveFn lv5_move(uint32_t va);

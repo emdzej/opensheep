@@ -45,6 +45,12 @@ void path_point(int p, int i, int *x, int *y)
     *y = q ? rd16(q, 6) : 0;
 }
 
+int path_ticks(int p, int i)
+{
+    const uint8_t *q = npf ? point(p, i) : NULL;
+    return q ? rd16(q, 2) : 0;
+}
+
 void path_start(int p)
 {
     const uint8_t *q = npf ? point(p, 0) : NULL;

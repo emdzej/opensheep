@@ -24,6 +24,7 @@ void sheep_collide(int x, int y, int32_t *s, int act);         /* 0x41b560 */
 void sheep_knocked(Sheep *a, int n);                           /* 0x41c630: n = a->slot */
 void sheep_walk(Sheep *a);                                     /* 0x41c480: move type 0 */
 void sheep_pathed(Sheep *a, int n);                            /* 0x41c880: move type 8; n = a->slot */
+void sheep_specials(int x, int y, Sheep *a, int act);         /* 0x41ac20: the special cell under (x, y) */
 void sheep_tick(void);                                         /* 0x41caf0 */
 void sheep_animate(void);                                      /* 0x41e380 */
 void sheep_collect(void);                                      /* 0x41e6d0 */

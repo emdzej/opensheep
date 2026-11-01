@@ -349,7 +349,7 @@ static void trigger(int16_t id, int special, int who)
     g_anim[s].d[0x21] = who;
 }
 
-static void player_specials(int x, int y, Player *p, int act)
+void player_specials(int x, int y, Player *p, int act)
 {
     /* 0x417550: the special cell (layer3) under (x, y), if the cell's collision mask is set there */
     g_on_ice = 0;
