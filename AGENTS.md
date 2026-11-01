@@ -35,7 +35,7 @@ guarded, with a comment describing what the original does.
 |---|---|
 | `src/` | The core: app loop (`app.c`, `flow.c` = App_Frame's states), data (`vfs.c` + ISO 9660, `xp.c` archives, `rnc.c`), `exe.c`, sprites and surfaces, fonts, levels (`level.c`, `objects.c`, `play.c`, `lv1.c`..`lv9.c` per world), flock (`sheep.c`), shepherd (`player.c`, demos), moves, HUD, menus (`menu.c`, `pause.c`), results, high scores, saves, credits, cheats/debug keys, sound mixer, Bink (`bink.c`, `movie.c`), input. Backend: `platform_gasm.c` (the only file that includes `gasm.h`). Test host pieces: `vfs_host.c`, `storage_file.c`, `input_none.c` |
 | `tests/` | `play_test.c`, `xp_test.c` (headless, against the real data), `hashes.txt` (`tools/regress.sh`) |
-| `tools/` | `fn.sh <addr>` (a function from `re/all.c`), `dis.py` (disassembler), format decoders (`xp.py`, `spr.py`, `blo.py`, `rnc.py`), `bik.c` and `overview.c` (native), `regress.sh`, `web-play-test.mjs` (the browser player in headless Chrome against gasm-run's hashes), `fetch-gasm-sdk.sh` / `fetch-gasm-runner.sh`, `ghidra/` scripts |
+| `tools/` | `fn.sh <addr>` (a function from `re/all.c`), `dis.py` (disassembler), format decoders (`xp.py`, `spr.py`, `blo.py`, `rnc.py`), `bik.c` and `overview.c` (native), `regress.sh`, `package-gasm.sh` + `gasm-bundle/` (release bundles: launchers per OS) and `smoke-gasm-bundle.sh`, `favicon.py` (the icon, our own drawing), `web-play-test.mjs` (the browser player in headless Chrome against gasm-run's hashes), `fetch-gasm-sdk.sh` / `fetch-gasm-runner.sh`, `ghidra/` scripts |
 | `docs/` | The VitePress site: `guide/`, the browser player `public/play/` (`play.js`, `cd.js`; the gasm runtime vendored by `scripts/vendor-web.sh`), `architecture.md`, `formats.md` |
 
 ## Build and test

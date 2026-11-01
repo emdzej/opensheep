@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Sheep (OpenSheep)
+GenericName=Puzzle game
+Comment=OpenSheep, a reimplementation of Sheep (2000), on gasm. Needs your Sheep CD.
+Exec="@DIR@/opensheep.sh"
+Icon=@DIR@/opensheep.png
+Terminal=false
+Categories=Game;LogicGame;

@@ -31,6 +31,7 @@ h2 { font-size: 1.15rem; margin: 0 0 .6rem; }
 .bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   padding: 0 24px; height: 60px; background: var(--bg); border-bottom: 1px solid var(--divider); }
 .brand { display: flex; align-items: center; gap: .5rem; color: var(--text); font-weight: 600; font-size: 1.05rem; }
+.brand img { image-rendering: pixelated; }
 .bar nav { display: flex; gap: 1.2rem; font-size: .9rem; }
 .bar nav a { color: var(--text-2); }
 .bar nav a[aria-current] { color: var(--brand); }

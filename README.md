@@ -17,7 +17,9 @@ program (`Sheep.exe`), which are read straight from the disc at run time.
 
 ## Running
 
-You need your own Sheep CD, as the disc, a folder copy or an `.iso` image.
+You need your own Sheep CD, as the disc, a folder copy or an `.iso` image. The
+[releases](https://github.com/emdzej/opensheep/releases) have bundles for macOS, Linux and Windows
+(the module, `gasm-run` and a launcher that asks for the CD once); by hand:
 
 ```sh
 gasm-run opensheep.wasm --asset cd=Sheep.iso          # an image
