@@ -12,6 +12,7 @@
 #include "results.h"
 #include "hiscore.h"
 #include "hint.h"
+#include "pause.h"
 #include "credits.h"
 #include "player.h"
 #include "sprites.h"
@@ -30,6 +31,7 @@ bool g_quit;
 
 static int key_latch = 1;           /* 0x450608: set when a screen starts, so a key still held is no press */
 static int load_blink;              /* 0x4a3b54 */
+static int tick_rest;               /* 0x4a19d8: the ms short of a tick */
 static Surface *load_pic;           /* 0x4b0f48 */
 static uint16_t load_bar[400];      /* 0x4ae104 */
 enum { LOAD_STAGE = 5 };            /* 0x4ae0ac when 0x406cc0 is done */
@@ -293,9 +295,10 @@ static void new_progress(void)
 
 void flow_new_game(void)
 {
-    /* 0x40f2a0 (TODO: 0x4b9678, the hint shown, cleared) */
+    /* 0x40f2a0 */
     g_next_world = g_next_level / 6;
     g_next_level %= 6;
+    g_pause = 0;
     g_app_state = APP_LEVEL;
     g_app_sub = 0;
     g_theme = (int8_t)g_next_world;
@@ -362,6 +365,21 @@ static void loading_draw(Framebuffer *fb)
         if (w > 0x280) w = 0x280;
         font_draw(0x140 - w / 2, 0x1bc, s, FONT_BIG, 0);
     }
+}
+
+static void level_frame(Framebuffer *fb)
+{
+    /* Level_Frame 0x40b9b0: as many ticks as fit 0x44b398 ms each in the time since the last frame, at
+       most 6, then the draw. A frame here is 16 ms, so one tick a frame unless TURBOGAME (8 ms) or
+       SNAILGAME (32 ms) changed it */
+    int ms = exe_s32(0x44b398);
+    tick_rest += 16;
+    int n = tick_rest / ms;
+    tick_rest %= ms;
+    if (n > 6) n = 6;
+    while (n-- > 0) play_tick();
+    memset(fb->pixels, 0, (size_t)fb->pitch * fb->h * 2);
+    play_draw(fb);
 }
 
 static void level_end(void)
@@ -511,9 +529,7 @@ bool flow_frame(Framebuffer *fb)
                 g_app_sub = 2;
             }
         } else {
-            play_tick();
-            memset(fb->pixels, 0, (size_t)fb->pitch * fb->h * 2);
-            play_draw(fb);
+            if (!pause_frame(fb) && !map_frame(fb)) level_frame(fb);
             if (g_end) level_end();
         }
         break;

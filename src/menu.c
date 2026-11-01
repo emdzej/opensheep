@@ -32,6 +32,7 @@ static int sel = -1;                /* 0x660004: the button chosen this tick, -1
 static int naming;                  /* 0x65ffa8: typing a save's name */
 
 bool menu_naming(void) { return naming != 0; }
+int menu_page(void) { return page; }
 static int idle;                    /* 0x65fffc: ticks without a move (to the attract mode) */
 static int back_latch;              /* 0x660000: pad button 4 */
 static int demo_i;                  /* 0x660014 */
@@ -383,6 +384,8 @@ static void set_page(int p)
         break;
     }
 }
+
+void menu_set_page(int p) { set_page(p); }
 
 static void actors_hold(void)
 {

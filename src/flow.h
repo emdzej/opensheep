@@ -34,7 +34,11 @@ void flow_new_game(void);
 /* 0x406cc0(1): the level loaded again from its start, in the middle of its tick. */
 void flow_level_reload(void);
 /* menu.c: a save's name being typed (0x65ffa8): the keys are text. */
+extern int g_menu_back;             /* 0x4b9638: a menu key is still held from its last use */
 bool menu_naming(void);
+/* The menu level's page (0x65ffa4) and Menu_SetPage 0x427870. */
+int menu_page(void);
+void menu_set_page(int p);
 /* menu.c: the name being typed (0x65ffb8, 0x20 characters), its start (length 0, the key down now
    not typed) and one tick of typing (0x427ea0, up to max characters): true on Enter. */
 uint16_t *menu_name(void);

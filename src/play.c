@@ -1,5 +1,6 @@
 #include "play.h"
 #include "cheats.h"
+#include "exe.h"
 #include "hint.h"
 #include "hud.h"
 #include "level.h"
@@ -26,6 +27,7 @@ int g_tim_hard, g_tim_normal, g_tim_easy;   /* 0x4a1eac, 0x4a28c8, 0x4a20b0 */
 int g_flock_n, g_flock_sx, g_flock_sy;
 static float cam_tx, cam_ty;        /* 0x4a3ea0, 0x4a4210 */
 static float cam_vx, cam_vy;        /* 0x4ae054, 0x4a40f8 */
+static int actor_phase;             /* 0x4ae088 */
 
 void game_new(void)
 {
@@ -207,11 +209,17 @@ void play_tick(void)
         g_anim[s].move = 0x11;
         g_anim[s].d[0x15] = 2;
     }
-    g_counted = 0;
-    for (int i = 0; i < MAX_SPECIAL; i++) g_special[i].count = 0;
-    if (!g_frozen) {
-        if (!g_level_over) player_tick(&g_player);
-        if (g_world != 7) sheep_tick();
+    /* the actors step 0x44b39c times a tick: 1, or 2 with TURBOSHEEP, or every other tick with
+       SNAILSHEEP (0) */
+    int steps = exe_s32(0x44b39c);
+    if (steps == 0) steps = actor_phase++ & 1;
+    for (int k = 0; k < steps; k++) {
+        g_counted = 0;
+        for (int i = 0; i < MAX_SPECIAL; i++) g_special[i].count = 0;
+        if (!g_frozen) {
+            if (!g_level_over) player_tick(&g_player);
+            if (g_world != 7) sheep_tick();
+        }
     }
     camera_update(&g_player);
     level_hook(DESC_TICK);
@@ -219,7 +227,7 @@ void play_tick(void)
     tile_anims_tick();
 }
 
-void play_draw(Framebuffer *fb)
+void play_draw_world(Framebuffer *fb)
 {
     draw_list_reset();
     level_draw_map(fb);
@@ -232,5 +240,10 @@ void play_draw(Framebuffer *fb)
     render_sorted(fb);
     level_hook(DESC_DRAW2);
     hud_draw();
+}
+
+void play_draw(Framebuffer *fb)
+{
+    play_draw_world(fb);
     hint_draw();
 }

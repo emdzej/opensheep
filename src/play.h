@@ -24,4 +24,6 @@ void camera_update(Player *p);
 /* One simulation tick of 0x40b9b0's loop. */
 void play_tick(void);
 /* The draw part of 0x40b9b0. */
+/* The level's frame up to the panel (0x40b9b0's draws); play_draw adds the hint box. */
+void play_draw_world(Framebuffer *fb);
 void play_draw(Framebuffer *fb);
