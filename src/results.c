@@ -51,8 +51,13 @@ static Surface *back;        /* 0x4b90fc */
 
 static void sound(int n)
 {
-    /* 0x40fef0: a bonus sound at full volume, unless skipping. TODO: the mixer (0x41f3a0, 0x4376b0) */
-    (void)n;
+    /* 0x40fef0: a bonus sound at full volume, unless skipping */
+    if (skip) return;
+    int v = sound_play(n, 0, 0);
+    if (v) {
+        snd_set_vol(v, 1.0f);
+        snd_update(v);
+    }
 }
 
 static int *target_anim(int i) { return &g_sheep[i].d[0x38 / 4]; }   /* 0x4b99f8 */
@@ -127,7 +132,7 @@ void results_start(int end)
     path[0x16] = (char)('0' + g_world);
     surface_free(back);
     back = surface_load_bmp(path);
-    /* TODO: the bonus sounds, data\misc\bonus.slf (0x41ea60) */
+    sound_bonus_load();
 }
 
 static void wobble(void)
@@ -530,7 +535,7 @@ void results_frame(Framebuffer *fb)
     wobble();
     if (won) win_tick();
     else fail_tick();
-    /* TODO: the music (0x419120) */
+    sound_tick();
     memset(fb->pixels, 0, (size_t)fb->pitch * fb->h * 2);
     if (won) win_draw(fb);
     else fail_draw(fb);

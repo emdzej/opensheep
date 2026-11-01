@@ -35,6 +35,8 @@ typedef struct {
 
 typedef struct {
     bool used;
+    int gen;                    /* of the handle */
+    int head;                   /* a duplicate: the buffer it was made from */
     int16_t refs;               /* +4 */
     float vol;                  /* +8 */
     const int32_t *px, *py;     /* +0xc, +0x10: the object's position */
@@ -57,8 +59,9 @@ typedef struct {
     uint32_t chunk_at, chunk_n;
 } Voice;
 
-int g_music;                            /* 0x4a40cc */
-static Voice voices[VOICES + 1];        /* handle = index, 0 unused */
+int g_sound_loaded;                     /* 0x4a19c8 */
+int g_music, g_music2;                  /* 0x4a40cc, 0x4a40d0 */
+static Voice voices[VOICES + 1];        /* [0] unused */
 static int sfx_slot[SFX_SLOTS];         /* 0x4b9984 */
 static int stream_slot[STREAM_SLOTS];   /* 0x4b9854 */
 
@@ -71,9 +74,13 @@ static int nentries;                    /* 0x4bbd68 */
 static float out[MAX_OUT * SOUND_CHANNELS];
 static int out_n;
 
-static Voice *V(int v) { return v > 0 && v <= VOICES && voices[v].used ? &voices[v] : NULL; }
-
-/* ------------------------------------------------------------------ buffers */
+/* A handle is the pool index and the generation the entry had then, so one kept past its buffer's
+   end (the original keeps dangling pointers) matches nothing. */
+static Voice *V(int v)
+{
+    int i = v & 0x1ff;
+    return v > 0 && i >= 1 && i <= VOICES && voices[i].used && voices[i].gen == v >> 9 ? &voices[i] : NULL;
+}
 
 static int voice_new(void)
 {
@@ -81,12 +88,14 @@ static int voice_new(void)
     for (int i = 1; i <= VOICES; i++)
         if (!voices[i].used) {
             Voice *o = &voices[i];
+            int gen = (o->gen + 1) & 0x3fffff;
             memset(o, 0, sizeof *o);
+            o->gen = gen;
             o->used = true;
             o->vol = o->base = 1.0f;
             o->slot = -1;
             o->ds = -10000;
-            return i;
+            return i | gen << 9;
         }
     fprintf(stderr, "sound: out of buffers\n");   /* the original allocates on and on */
     return 0;
@@ -96,15 +105,17 @@ static void voice_delete(int v)
 {
     Voice *o = V(v);
     if (!o) return;
-    int next = o->chain;
-    for (int i = 1; i <= VOICES; i++)
-        if (voices[i].used && voices[i].chain == v) voices[i].chain = next;
+    for (int i = 1; i <= VOICES; i++) {
+        Voice *p = &voices[i];
+        if (p->used && p->chain == v) p->chain = o->chain;     /* out of its chain */
+    }
     if (o->pcm && --o->pcm->refs == 0) { free(o->pcm->s); free(o->pcm); }
     if (o->file) vfs_close(o->file);
     free(o->chunk);
     o->used = false;
-    /* a buffer frees the duplicates made from it */
-    if (next && V(next)) voice_delete(next);
+    /* a buffer takes the duplicates made from it along */
+    for (int i = 1; i <= VOICES; i++)
+        if (voices[i].used && voices[i].head == v) voice_delete(i | voices[i].gen << 9);
 }
 
 static void voice_release(int v)
@@ -205,6 +216,7 @@ static int voice_dup(int v)
     if (n->pcm) n->pcm->refs++;
     n->frames = o->frames;
     n->base = 0.0f;
+    n->head = o->head ? o->head : v;
     return d;
 }
 
@@ -308,10 +320,11 @@ void snd_stop(int v)
     o->flags &= ~(uint32_t)F_FADE;
 }
 
-static void attach(int v, AnimObj *a)
+void sound_follow(int v, AnimObj *a)
 {
     /* 0x406700 */
     Voice *o = V(v);
+    if (!o) return;
     o->px = &a->x;
     o->py = &a->y;
     if (o->flags & F_LOOP) o->flags |= F_TRACK;
@@ -408,6 +421,24 @@ void sound_drop(int v)
     snd_stop(v);
     for (int i = 0; i < SFX_SLOTS; i++)
         if (sfx_slot[i] == v) { sfx_slot[i] = 0; break; }
+}
+
+void sound_stream_drop(int v)
+{
+    if (!v) return;
+    snd_stop(v);
+    for (int i = 0; i < STREAM_SLOTS; i++)
+        if (stream_slot[i] == v) { sound_stop_streams(i); stream_slot[i] = 0; break; }
+}
+
+void sound_music_restore(void)
+{
+    if (g_music) snd_set_vol(g_music, 0.95f);
+    if (g_music2) {
+        /* (the original only empties the slot, leaving the buffer allocated) */
+        sound_stream_drop(g_music2);
+        g_music2 = 0;
+    }
 }
 
 void sound_stop_streams(int i)
@@ -545,6 +576,14 @@ int sound_preload(int id)
     return v;
 }
 
+/* every id but the music (100-109), then the list goes */
+static void preload_all(void)
+{
+    for (int i = 0; i < IDS; i++)
+        if (i < 100 || i > 0x6d) sound_preload(i);
+    entries_free();
+}
+
 void sound_lists_load(void)
 {
     /* 0x401730 */
@@ -556,9 +595,16 @@ void sound_lists_load(void)
     snprintf(p, sizeof p, exe_str(0x44aa58), exe_str(exe_u32(0x44a500 + 4 * (uint32_t)g_char)));
     sound_list_load(p, false);
     sound_list_load(world_level_path(exe_str(0x44a0a0)), false);
-    for (int i = 0; i < IDS; i++)
-        if (i < 100 || i > 0x6d) sound_preload(i);
-    entries_free();
+    preload_all();
+    g_sound_loaded = 1;
+}
+
+void sound_bonus_load(void)
+{
+    /* part of 0x40ff30 */
+    if (!g_sound_fx) return;
+    sound_list_load(exe_str(0x44c4e0), true);
+    preload_all();
 }
 
 /* 0x419010: a buffer of its own for the file, playing. */
@@ -616,7 +662,7 @@ int sound_play_at(AnimObj *a, int id, int loop, int stream)
     if (a->y < g_lv.cam_y - 0xa0 || a->y > g_lv.cam_y + 0x280) return 0;
     int v = sound_play(id, loop, stream);
     if (v) {
-        attach(v, a);
+        sound_follow(v, a);
         if (!(char)loop) {
             snd_set_vol(v, distance_volume(V(v)));
             snd_update(v);

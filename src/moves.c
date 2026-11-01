@@ -260,9 +260,10 @@ void move_05(AnimObj *a)
 
 static void kill_effect(void)
 {
-    /* The running effect-3 object; TODO: the music volume (0x4376b0) and its looping sound */
+    /* The running effect-3 object, and its music */
     int s = g_anim[g_player.slot].d[0x21];
     anim_kill(&g_anim[s]);
+    sound_music_restore();
 }
 
 static void pickup_taken(AnimObj *a)
@@ -298,7 +299,9 @@ static void move_07(AnimObj *a)
             g_anim[s].sub = 6;
             g_anim[s].d[0x15] = g_player.slot;
             g_anim[g_player.slot].d[0x21] = s;
-            /* TODO: music down (0x4376b0) and the looping sound 0x61 (0x41f160) */
+            if (g_music) snd_set_vol(g_music, 0.8f);
+            g_music2 = sound_stream(0x61, 1, 0);
+            if (g_music2) snd_set_vol(g_music2, 1.0f);
             break;
         }
         case 4: {

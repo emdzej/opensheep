@@ -130,7 +130,8 @@ static void lv11_move_04(AnimObj *a)
             g_special[d[0x1b]].active = 1;
             a->sub = 3;
         }
-        d[0x20] = 0;   /* TODO: stop the voice (0x406650) */
+        sound_drop(d[0x20]);
+        d[0x20] = 0;
         break;
     case 3:
         a->countdown = 10;
@@ -173,7 +174,7 @@ static void lv11_move_09(AnimObj *a)
             d[0x1f] = sound_play_at(a, 0x11, 1, 0);
         }
     } else if (a->sub == 3) {
-        /* TODO: stop the voice d1f (0x406650) */
+        sound_drop(d[0x1f]);
         d[0x1f] = sound_play_at(a, 0x12, 1, 0);
     }
     move_10(a);

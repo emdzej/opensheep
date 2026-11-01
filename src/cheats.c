@@ -9,6 +9,7 @@
 #include "world.h"
 #include "play.h"
 #include "platform.h"
+#include "sound.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -94,7 +95,12 @@ void cheat_world_keys(void)
     if (!g_cheats || g_keyheld[DIK_LSHIFT]) return;
     for (int i = 0; i < 7; i++) {
         if (!g_keyheld[DIK_1 + i]) continue;
-        /* TODO: the sound and the music stop (0x419490, 0x4193c0, 0x419120, 0x41ef60) */
+        if (g_sound_fx) {
+            sound_stop_sfx(-1);
+            sound_stop_streams(-1);
+            sound_tick();
+            sound_free_all();
+        }
         if (i > 0) flow_world_movie(i);
         input_keys_tick();
         g_next_level = 6 * (i + 1);

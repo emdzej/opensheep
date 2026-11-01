@@ -10,6 +10,8 @@
 #include "rng.h"
 #include "sprites.h"
 #include "surface.h"
+#include "cheats.h"
+#include "sound.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -18,6 +20,7 @@
    checksum byte; the original writes 0x800 bytes from here. */
 enum { ENTRY = 0x20, ENTRIES = 60, TABLE = ENTRY * ENTRIES, FILE_SIZE = 0x800, NAME = 0xc };
 static uint8_t tab[FILE_SIZE];
+static uint8_t music_phase;   /* 0x4a907c */
 
 static int32_t rd(int i, int off) { int32_t v; memcpy(&v, tab + ENTRY * i + off, 4); return v; }
 static void wr(int i, int off, int32_t v) { memcpy(tab + ENTRY * i + off, &v, 4); }
@@ -137,7 +140,7 @@ void hiscores_start(void)
     sprite_bank_load_misc(SPR_BANK_TEXT_YELLOW, "TextYellow.spr");
     sprite_bank_load_misc(SPR_BANK_TEXT_BLUE, "TextBlue.spr");
     for (int c = 0; c < 4; c++) sprite_bank_load(100 + c, exe_str(0x44bc04 - 0x20 * (uint32_t)c));
-    /* TODO: the music, data\sound\music\credits.wav (0x418fd0) */
+    if (g_sound_fx) sound_stream_file(exe_str(0x44bacc), 1);
     for (int i = 0; i < 50; i++) {
         /* _wcsupr on the names of the first 50 */
         for (int k = 0; k < 10; k++) {
@@ -293,7 +296,7 @@ void hiscores_frame(Framebuffer *fb)
     headers();
     rows();
     tick();
-    /* TODO: the music (0x419120 every fifth frame) */
+    if (music_phase++ % 5 == 0) sound_tick();
 }
 
 void hiscores_end(void)

@@ -13,11 +13,14 @@
 enum { SOUND_RATE = 44100, SOUND_CHANNELS = 2 };
 
 extern float g_sfx_volume, g_music_volume;   /* 0x4b9850, 0x4b9860 (menu.c) */
-extern int g_music;                          /* 0x4a40cc: the level's music */
+extern int g_sound_loaded;                   /* 0x4a19c8: the lists are loaded */
+extern int g_music, g_music2;                /* 0x4a40cc the level's music, 0x4a40d0 a looping stream over it */
 
 /* 0x401730: with SOUND_FX, the generic, breed, player and level lists; every id but the music
    (100-109) loaded; the list freed. */
 void sound_lists_load(void);
+/* 0x40ff30: the results' list, data\\misc\\bonus.slf. */
+void sound_bonus_load(void);
 /* 0x41ea60: one list; reset starts a new id table. */
 bool sound_list_load(const char *path, bool reset);
 /* 0x41f2e0 */
@@ -38,6 +41,10 @@ void sound_stop_sfx(int i);
 void sound_stop_streams(int i);
 /* Inline in many places (0x4025c0, 0x413e60, ...): stop a voice and empty its effect slot. */
 void sound_drop(int v);
+/* The same for a stream: stopped, its slot freed (0x4193c0). */
+void sound_stream_drop(int v);
+/* The end of a power-up (0x412480, 0x414c70): the music back to 0.95, the stream over it stopped. */
+void sound_music_restore(void);
 /* 0x41ef60: the lists and every buffer. */
 void sound_free_all(void);
 
@@ -46,6 +53,8 @@ void snd_set_vol(int v, float vol);
 float snd_vol(int v);
 bool snd_update(int v);
 void snd_stop(int v);
+/* 0x406700: the voice at the object (its volume following it, if looping). */
+void sound_follow(int v, AnimObj *a);
 
 /* Mix one app frame (16 ms) of output; the host takes it with sound_output. */
 void sound_frame(void);

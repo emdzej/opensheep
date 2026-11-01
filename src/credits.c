@@ -11,6 +11,8 @@
 #include "sprites.h"
 #include "surface.h"
 #include "xp.h"
+#include "cheats.h"
+#include "sound.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +30,7 @@ static struct cline {
     uint16_t *text;      /* +0x1c */
 } line[LINES];
 static int nlines;       /* 0x4ae0b0 */
+static uint8_t music_phase;   /* 0x4a40fc */
 static int hold;         /* 0x4adef8: ticks the block stays */
 
 static uint16_t *text;   /* 0x4ae430: the file, UTF-16 */
@@ -147,7 +150,7 @@ void credits_start(void)
     frames[0] = sprite_frames(0x65);
     frames[1] = sprite_frames(0x66);
     frames[2] = 0;
-    /* TODO: the music, data\sound\music\credits.wav (0x418fd0) */
+    if (g_sound_fx) sound_stream_file(exe_str(0x44bacc), 1);
     char ext[8], path[64];
     snprintf(ext, sizeof ext, "%s", exe_str(0x44a098));
     ext[3] = (char)exe_u8(0x456264 + (uint32_t)(g_lang & 0xf));
@@ -284,7 +287,7 @@ void credits_frame(Framebuffer *fb)
     tick();
     lines_draw();
     block_step();
-    /* TODO: the music (0x419120 every fifth frame) */
+    if (music_phase++ % 5 == 0) sound_tick();
 }
 
 void credits_end(void)

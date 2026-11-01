@@ -126,7 +126,7 @@ static void player_effects(Player *p)
     case 3:
         if (--p->effect_time > 0) return;
         p->effect = 0;
-        /* TODO: sound: 0x4a40cc fades the music back (0x4376b0), 0x4a40d0 stops a voice (0x406650) */
+        sound_music_restore();
         break;
     case 4: {
         if (p->effect_time - 1 < 1) p->effect = 0;

@@ -1,4 +1,5 @@
 #include "levels_int.h"
+#include "cheats.h"
 #include "flow.h"
 #include "font.h"
 #include "hud.h"
@@ -47,7 +48,6 @@ static int last_key;                /* 0x65ff94 */
 static int name_len, name_max;      /* 0x65ff30, 0x65ffb0 */
 static int blink;                   /* 0x65ffb4 */
 static int8_t lat_right, lat_left, lat_up, lat_down, lat_button;  /* 0x65ff38, 0x65ff8c, 0x660009, 0x660008, 0x65ff9c */
-static bool music_on;               /* 0x4a19c8 */
 float g_sfx_volume = 1.0f;          /* 0x4b9850 */
 float g_music_volume = 1.0f;        /* 0x4b9860 */
 int g_sfx_level;                    /* 0x451848 */
@@ -494,9 +494,17 @@ static void load_slot_progress(int slot)
 
 static void jukebox(int t)
 {
-    /* the track's title; TODO: the music (0x4193c0 stops it, 0x41f160(track + 100) plays) */
+    /* the track's title, and its music (the next one ticks the mixer before it starts, the previous
+       one does not) */
+    bool up = t > track;
     track = t;
     put_s16(0x450fc8, t == 0 ? 0x1d : exe_s16(0x450b9e + 2 * (uint32_t)t));
+    if (!g_sound_fx) return;
+    sound_stop_streams(-1);
+    if (up) sound_tick();
+    g_music = sound_stream(t + 100, 1, 1);
+    if (g_music) snd_set_vol(g_music, 0.95f);
+    sound_tick();
 }
 
 static bool name_key(void)
@@ -566,8 +574,13 @@ static void menu_tick(void)
         if (sel >= 0 && sel < 4) {
             g_char = (int8_t)sel;
             set_page(PAGE_MAP);
-            /* TODO: stop the music and free its streams (0x419490, 0x4066a0) */
-            music_on = false;
+            if (g_sound_fx) {
+                sound_stop_sfx(-1);
+                sound_stop_streams(-1);
+                sound_tick();
+                sound_free_all();
+            }
+            g_sound_loaded = 0;
             play_movie(exe_str(exe_u32(0x451828 + 4 * (uint32_t)g_char)));
         }
         if (back) set_page(PAGE_MAIN);
@@ -652,7 +665,12 @@ static void menu_tick(void)
         if (sel >= 0 && sel < 4) {
             g_breed = sel;
             if (!(breeds_seen & bit(sel))) {
-                /* TODO: the music stops (0x419490, 0x4193c0) */
+                if (g_sound_fx) {
+                    sound_stop_sfx(-1);
+                    sound_stop_streams(-1);
+                    sound_tick();
+                    sound_free_all();
+                }
                 play_movie(exe_str(exe_u32(0x451838 + 4 * (uint32_t)sel)));
                 breeds_seen = (int8_t)(breeds_seen | bit(sel));
             }
@@ -677,8 +695,13 @@ static void menu_tick(void)
         }
         break;
     case PAGE_MAP:
-        if (!music_on) {
-            /* TODO: the level's sounds (0x401730) and the music (0x41f160(100)) */
+        if (!g_sound_loaded) {
+            sound_lists_load();
+            if (g_sound_fx) {
+                g_music = sound_stream(100, 1, 1);
+                if (g_music) snd_set_vol(g_music, 0.95f);
+                sound_tick();
+            }
         }
         if (method != 2 && method != 3) pad_read();
         if (g_pad_buttons == 0) lat_button = 0;
@@ -832,7 +855,9 @@ static void menu_move_01(AnimObj *a)
             anim_set(b->slot, b->d[0x1a], -1);
             g_keyheld[DIK_RETURN] = 6;
             sel = b->d[BTN_OFF];
-            /* TODO: the select sound (0x41f3a0(2, 0, 0)) at full volume (0x4376b0, 0x4060d0) */
+            int v = sound_play(2, 0, 0);    /* the select sound at full volume */
+            snd_set_vol(v, 1.0f);
+            snd_update(v);
         }
         return;
     case 2:

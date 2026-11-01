@@ -13,6 +13,7 @@
 #include "sprites.h"
 #include "surface.h"
 #include "world.h"
+#include "sound.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -231,11 +232,12 @@ bool pause_frame(Framebuffer *fb)
             if (i == cur && blink & 4) sprite_draw(x - 0x14, y + 2, SPR_BANK_MISC, 0x3e, 0x200, 0x80);
         }
     call(pg(page, 8));
-    /* TODO: the sound tick (0x419120) */
+    sound_tick();
     return true;
 }
 
 static Surface *map_pic;    /* 0x4b1068 */
+static unsigned photo_phase, map_phase;   /* 0x4a3b50, 0x4ae078 */
 static Surface *photo_pic;  /* 0x4b1018 */
 static int map_x, map_y;    /* 0x4a9084, 0x4a4104: the map's first lit pixel, the level's (0, 0) */
 static int pen_x, pen_y;    /* 0x4adeac, 0x4ae050 */
@@ -267,7 +269,7 @@ static bool photo_frame(Framebuffer *fb)
     input_map();
     if (!flow_any_key()) {
         draw_pic(fb, photo_pic);
-        /* TODO: the sound tick every other frame (0x419120) */
+        if (photo_phase++ & 1) sound_tick();     /* every other frame */
         return true;
     }
     surface_free(photo_pic);
@@ -304,7 +306,7 @@ bool map_frame(Framebuffer *fb)
         sprite_tint(6);
         sprite_draw(ftol(g_player.x) / 6 + map_x, ftol(g_player.y) / 6 + map_y, SPR_BANK_MISC, 7, 0x100, 0x100);
         sprite_tint(0);
-        /* TODO: the sound tick every other frame (0x419120) */
+        if (map_phase++ & 1) sound_tick();       /* every other frame */
         return true;
     }
     if (!g_keyheld[DIK_TAB] && !(g_pad_buttons & 8)) return false;

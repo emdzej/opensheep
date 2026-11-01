@@ -989,7 +989,7 @@ static void lv61_move_29(AnimObj *a)
             g_tile_anim[d[0x18]].frame = 0;
             a->sub = 2;
             d[0x1d] = d[0x17] * 6;
-            /* 0x406650 stops the voice (TODO: the mixer); d27 stays */
+            sound_drop(a->sound);   /* d27 stays */
             a->sound = 0;
         }
     } else if (a->sub == 2) {
@@ -1013,12 +1013,15 @@ static void lv61_move_30(AnimObj *a)
     if (a->sub == 0) {
         if (d[0x22] != -1) {
             if (d[0x17] != 0) d[0x1d] = attract_new(a->x, a->y, d[0x17] / 10, d[0x18], d[0x17] % 10);
-            /* TODO: sound: music to 0.8 (0x4376b0) and the looping sound d1c (0x41f160) */
+            if (g_music) snd_set_vol(g_music, 0.8f);
+            g_music2 = sound_stream((int16_t)d[0x1c], 1, 1);
+            if (g_music2) snd_set_vol(g_music2, 1.0f);
             a->sub = 1;
         }
     } else if (a->sub == 1) {
         if (d[0x22] == -1) {
-            /* TODO: sound: music back to 0.95 and the looping sound stopped (0x406650, 0x4193c0) */
+            if (g_music) snd_set_vol(g_music, 0.95f);
+            sound_stream_drop(g_music2);
             if (d[0x17] != 0) g_attract[d[0x1d]].type = 0;
             a->sub = 0;
         }
@@ -1046,7 +1049,7 @@ static void lv61_move_31(AnimObj *a)
             a->sub = 2;
             d[0x1d] = d[0x18] * 6;
             g_special[d[0x19]].active = 1;
-            /* 0x406650 stops the voice (TODO: the mixer); d27 stays */
+            sound_drop(a->sound);   /* d27 stays */
             a->sound = 0;
         }
         d[0x22] = -1;

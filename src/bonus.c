@@ -793,6 +793,7 @@ static void lv35_move_03(AnimObj *a)
 static AnimObj **pellets;         /* 0x66003c */
 static int npellets;              /* 0x66001c */
 static int fast45;                /* 0x660020: power pill ticks */
+static int pill45;                /* 0x660038: its looping sound */
 static int lot45;                 /* 0x660034: which lot of pellets is being eaten */
 static int left45[3];             /* 0x66002c, 0x660028, 0x660024 */
 int g_lives45;                    /* 0x660030 */
@@ -825,7 +826,7 @@ static void lv45_init(void)
     g_hud_style = 3;
     player_set_state(&g_player, 100);
     fast45 = 0;
-    /* 0x660038, the power pill's looping sound, stays 0 (TODO: the mixer) */
+    pill45 = 0;
 }
 
 static void lv45_tick(void)
@@ -839,9 +840,11 @@ static void lv45_tick(void)
 
 static void lv45_release(void)
 {
-    /* 0x4294e0 (and the looping sound stopped, TODO: the mixer) */
+    /* 0x4294e0 */
     free(pellets);
     pellets = NULL;
+    sound_drop(pill45);
+    pill45 = 0;
 }
 
 static void lv45_actor(int32_t *a)
@@ -877,7 +880,11 @@ static void lv45_actor(int32_t *a)
         p->creep = 1.5f;
         p->walk = 4.0f;
         p->run = 6.0f;
-        if (fast45 <= 0) g_anim[PLAYER_SLOT].rec.tint = 0;
+        if (fast45 <= 0) {
+            g_anim[PLAYER_SLOT].rec.tint = 0;
+            sound_drop(pill45);
+            pill45 = 0;
+        }
         return;
     case 101:
         p->speed = 0;
@@ -938,8 +945,8 @@ static void lv45_move_00(AnimObj *a)
 
 static void lv45_move_01(AnimObj *a)
 {
-    /* 0x429690: the power pill: 5 points, 500 fast ticks (tinted 2), sound 9 (and a looping one
-       with the music down to 0.9: TODO, the mixer) */
+    /* 0x429690: the power pill: 5 points, 500 fast ticks (tinted 2), sound 9 and the looping 0xb at
+       0.9 */
     if (a->d[0x22] != -1) {
         int i = a->d[0x16];
         if (i >= 0 && i < npellets && pellets[i]) {
@@ -950,6 +957,10 @@ static void lv45_move_01(AnimObj *a)
         fast45 = 500;
         g_anim[PLAYER_SLOT].rec.tint = 2;
         sound_play_at(a, 9, 0, 0);
+        if (pill45 == 0) {
+            pill45 = sound_play(0xb, 1, 0);
+            if (pill45) snd_set_vol(pill45, 0.9f);
+        }
     }
     a->d[0x22] = -1;
 }

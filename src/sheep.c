@@ -1674,6 +1674,8 @@ void sheep_tick(void)
 
 void sheep_animate(void)
 {
+    static int baa;             /* 0x4bbd60 */
+    AnimObj *playing = NULL;
     for (int i = 0; i < MAX_SHEEP; i++) {
         Sheep *a = &g_sheep[i];
         AnimObj *o = &g_anim[i];
@@ -1747,8 +1749,17 @@ void sheep_animate(void)
         }
         o->x = ftol((double)a->x);
         o->y = ftol((double)a->y);
+        if (o->anim == 0xe) playing = o;
     }
-    /* TODO: the looping sound of a sheep playing animation 0xe (0x4bbd60) */
+    /* the looping sound 8 of the last sheep playing animation 0xe, stopped when none is */
+    if (!playing) {
+        sound_drop(baa);
+        baa = 0;
+    } else if (baa) {
+        sound_follow(baa, playing);
+    } else {
+        baa = sound_play_at(playing, 8, 1, 0);
+    }
 }
 
 /* ---------------------------------------------------------------- drawing (0x41e6d0) */
