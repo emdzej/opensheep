@@ -1,4 +1,5 @@
-/* overview W.L [scale] > out.ppm: the whole level after level_start (map, objects, flock, shepherd)
+/* overview W.L [scale] [ticks] > out.ppm: the whole level after level_start and that many ticks (map,
+   objects, flock, shepherd)
    rendered screen by screen and shrunk by scale (default 4). A development aid; reads the data like
    the tests (./cd or OPENSHEEP_DATA). */
 #include "exe.h"
@@ -22,6 +23,7 @@ int main(int argc, char **argv)
     game_new();
     if (!world_select(world, level) || !level_load_resources()) { fprintf(stderr, "cannot load %d.%d\n", world, level); return 1; }
     level_start();
+    for (int t = argc > 3 ? atoi(argv[3]) : 0; t > 0; t--) play_tick();
     /* the part the camera can show (cam_max_* are the right and bottom edges) */
     int W = g_lv.cam_max_x, H = g_lv.cam_max_y;
     if (W > g_lv.px_w || g_lv.cam_max_x <= g_lv.cam_min_x) W = g_lv.px_w;

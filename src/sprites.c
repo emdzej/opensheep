@@ -184,14 +184,222 @@ static void draw_sheared(int x, int y, int bank, uint32_t frame)
     }
 }
 
+/* ---------------------------------------------------------------- Sprite_DrawScaled 0x420320
+   A Bresenham scaler: each source row is decoded into a buffer of {alpha, rgb565} (0x4bbd74; 0 for
+   gaps, 4 opaque), then drawn stretched or squeezed; rows are repeated or dropped the same way. The
+   original's quirks are kept: the clipped squeezing drawer steps the buffer by 2 bytes, not 3, over
+   pixels left of the clip; the clipped versions start drawing one row early above the clip; the
+   drawers blend unknown alpha values as 1 (except the clipped stretching one). */
+
+static uint8_t sbuf[3 * 1024 + 8];
+static int s_w, s_dw, s_dx0, s_rows;    /* 0x4bc280, 0x4bc8dc, 0x4bc288, 0x4bc8e4 */
+static bool s_tint;
+
+static uint16_t sb16(const uint8_t *p) { return (uint16_t)(p[0] | p[1] << 8); }
+
+static const uint8_t *decode_row(const uint8_t *p, bool mirror)
+{
+    /* 0x420800, 0x4208b0 (mirrored: filled from the end) */
+    if (--s_rows < 0) return p;
+    int i = mirror ? s_w - 1 : 0, dir = mirror ? -1 : 1, left = s_w;
+    for (;;) {
+        uint8_t b = *p++;
+        if (!b) break;
+        if (b & 0x80) {
+            int n = 256 - b;
+            for (int k = 0; k < n; k++, i += dir) sbuf[3 * i] = 0;
+            left -= n;
+        } else if (b < 0x40) {
+            for (int k = 0; k < b; k++, i += dir, p += 3) {
+                uint16_t c = sb16(p + 1);
+                if (s_tint) c = tinted(c);
+                sbuf[3 * i] = p[0];
+                sbuf[3 * i + 1] = (uint8_t)c;
+                sbuf[3 * i + 2] = (uint8_t)(c >> 8);
+            }
+            left -= b;
+        } else {
+            for (int k = 0; k < b - 0x3f; k++, i += dir, p += 2) {
+                uint16_t c = sb16(p);
+                if (s_tint) c = tinted(c);
+                sbuf[3 * i] = 4;
+                sbuf[3 * i + 1] = (uint8_t)c;
+                sbuf[3 * i + 2] = (uint8_t)(c >> 8);
+            }
+            left -= b - 0x3f;
+        }
+    }
+    for (; left > 0; left--, i += dir) sbuf[3 * i] = 0;
+    return p;
+}
+
+static void put(uint16_t *d, const uint8_t *q, bool strict)
+{
+    uint16_t c = sb16(q + 1);
+    switch (q[0]) {
+    case 0: break;
+    case 4: *d = c; break;
+    case 3: *d = (uint16_t)(c - ((c & 0xe79c) >> 2) + ((*d & 0xe79c) >> 2)); break;
+    case 2: *d = (uint16_t)(((c & 0xf7de) >> 1) + ((*d & 0xf7de) >> 1)); break;
+    default:
+        if (strict && q[0] != 1) break;
+        *d = (uint16_t)(*d - ((*d & 0xe79c) >> 2) + ((c & 0xe79c) >> 2));
+        break;
+    }
+}
+
+static void row_squeeze(uint16_t *d)
+{
+    /* 0x420960 */
+    int two = s_dw * 2, inc = two - s_w * 2, err = 0;
+    const uint8_t *q = sbuf;
+    for (int n = s_w; n; n--, q += 3) {
+        err += inc;
+        if (err >= 0) put(d++, q, false);
+        else err += two - inc;
+    }
+}
+
+static void row_squeeze_clipped(uint16_t *d)
+{
+    /* 0x420a50 */
+    int two = s_dw * 2, inc = two - s_w * 2, err = 0, x = s_dx0;
+    const uint8_t *q = sbuf;
+    for (int n = s_w; n; n--) {
+        err += inc;
+        if (err < 0) {
+            err += two - inc;
+            q += 3;
+            continue;
+        }
+        if (x >= clip_x0) {
+            if (x >= clip_x1) return;
+            put(d, q, false);
+            q++;
+        }
+        q += 2;
+        d++;
+        x++;
+    }
+}
+
+static void row_stretch(uint16_t *d)
+{
+    /* 0x420b60 */
+    int two = s_w * 2, err = two - s_dw, inc = err - s_dw;
+    const uint8_t *q = sbuf;
+    for (int n = s_dw; n; n--) {
+        err += inc;
+        put(d++, q, false);
+        if (err < 0) err += two - inc;
+        else q += 3;
+    }
+}
+
+static void row_stretch_clipped(uint16_t *d)
+{
+    /* 0x420ce0 */
+    int two = s_w * 2, err = two - s_dw, inc = err - s_dw, x = s_dx0;
+    const uint8_t *q = sbuf;
+    for (int n = s_dw; n; n--) {
+        err += inc;
+        if (err < 0) {
+            if (x >= clip_x0) {
+                if (x >= clip_x1) return;
+                put(d, q, true);
+            }
+            err += two - inc;
+        } else {
+            if (x >= clip_x1) return;
+            if (x >= clip_x0) put(d, q, true);
+            q += 3;
+        }
+        d++;
+        x++;
+    }
+}
+
+static void draw_scaled(int x, int y, int bank, uint32_t frame, int sx, int sy, bool tint_on)
+{
+    if (!(sx > 3 && sx < 0x1000 && sy > 3 && sy < 0x1000)) return;
+    SprFrame f;
+    if (!sprite_frame(bank, (int)(frame & 0x3fffffff), &f)) return;
+    if (f.w > 1024) return;
+    s_w = f.w;
+    s_dw = f.w * sx >> 8;
+    s_dx0 = f.w / 2 - s_dw / 2 + x;
+    int h = f.h, dh = f.h * sy >> 8;
+    int dy0 = (h - dh) * 3 / 4 + y;
+    s_rows = h;
+    s_tint = tint_on;
+    if (!(s_dx0 <= clip_x1 && clip_x0 <= s_dx0 + s_dw && dy0 <= clip_y1 && clip_y0 <= dy0 + dh)) return;
+    bool clipped = s_dx0 < clip_x0 || clip_x1 <= s_dx0 + s_dw || dy0 < clip_y0 || clip_y1 <= dy0 + dh;
+    bool mirror = frame & SPR_MIRROR;
+    void (*row)(uint16_t *) = clipped ? (sx > 0x100 ? row_stretch_clipped : row_squeeze_clipped)
+                                      : (sx > 0x100 ? row_stretch : row_squeeze);
+    const uint8_t *p = f.rows;
+    int pitch = target->pitch;
+    if (sy < 0x100) {
+        int top = dy0 - clip_y0;
+        if (clipped && top < 0) dy0 = clip_y0;
+        int avail = clip_y1 - dy0;
+        uint16_t *d = target->pixels + (ptrdiff_t)dy0 * pitch + s_dx0;
+        int two = dh * 2, inc = two - h * 2, err = 0;
+        for (int n = h; n > 0; n--) {
+            err += inc;
+            if (err < 0) {
+                p = decode_row(p, mirror);
+                err += two - inc;
+            } else if (!clipped) {
+                p = decode_row(p, mirror);
+                row(d);
+                d += pitch;
+            } else {
+                if (--avail < 0) return;
+                p = decode_row(p, mirror);
+                if (++top >= 0) {
+                    row(d);
+                    d += pitch;
+                }
+            }
+        }
+    } else {
+        int top = dy0 - clip_y0;
+        if (clipped && top < 0) dy0 = clip_y0;
+        int avail = clip_y1 - dy0;
+        uint16_t *d = target->pixels + (ptrdiff_t)dy0 * pitch + s_dx0;
+        int two = h * 2, err = two - dh, inc = err - dh;
+        p = decode_row(p, mirror);
+        for (int n = dh - 1; n > 0; n--) {
+            err += inc;
+            bool next = err >= 0;
+            if (!next) err += two - inc;
+            if (clipped) {
+                if (avail - 1 < 0) return;
+                if (top + 1 >= 0) {
+                    row(d);
+                    d += pitch;
+                }
+                avail--;
+                top++;
+            } else {
+                row(d);
+                d += pitch;
+            }
+            if (next) p = decode_row(p, mirror);
+        }
+    }
+}
+
 void sprite_draw(int x, int y, int bank, uint32_t frame, int sx, int sy)
 {
     if (!target) return;
     if (!(clip_x0 < clip_x1 && clip_x1 >= 0 && clip_y0 < clip_y1 && clip_y1 >= 0)) return;
     bool tint_on = false;
     if (tint && (int)(frame & 0x7fffffff) < sprite_frames(bank)) {
-        tint_on = true;                                    /* drawn as bank 399: the shear flag is lost */
-        frame &= (uint32_t)SPR_MIRROR;
+        /* the original copies the frame, tinted, into bank 399 as its frame 0 and draws that; the test
+           above excludes sheared frames */
+        tint_on = true;
     }
     if ((int)(frame & 0x3fffffff) >= sprite_frames(bank)) return;
     if (frame & SPR_SHEAR) {
@@ -199,8 +407,7 @@ void sprite_draw(int x, int y, int bank, uint32_t frame, int sx, int sy)
         return;
     }
     if (sx != SPR_SCALE_1 || sy != SPR_SCALE_1) {
-        static bool warned;
-        if (!warned) fprintf(stderr, "sprite_draw: scaled blitter 0x420320 not ported\n"), warned = true;
+        draw_scaled(x, y, bank, frame, sx, sy, tint_on);
         return;
     }
     SprFrame f;
