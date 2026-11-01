@@ -18,6 +18,11 @@ extern int g_switch_wait[32];           /* 0x4b9680: Move_14 per-actor cooldown 
 extern int g_carry_time;                /* 0x4b9714: set by Move_06 (no reader found yet) */
 extern AnimObj *g_carry_obj;            /* 0x4b9718 */
 
+/* Standard routines the level-specific ones call. */
+void move_03(AnimObj *a);               /* 0x411fe0 */
+void move_05(AnimObj *a);               /* 0x412270 */
+void move_10(AnimObj *a);               /* 0x413130 */
+void move_19(AnimObj *a);               /* 0x413e60 */
 /* 0x402700's dispatch: a->move n runs standard routine n, n | 0x8000 the level's routine n. */
 void move_run(AnimObj *a);
 /* 0x403130: gate g (descriptor +0x54) closed (open = 0) or open: copy its map cells into place. */

@@ -204,7 +204,7 @@ static void move_02(AnimObj *a)
     }
 }
 
-static void move_03(AnimObj *a)
+void move_03(AnimObj *a)
 {
     /* 0x411fe0: follows path d16 (mode d1c) carrying up to two attractors: d17 / d19 = type * 10 +
        power, d18 / d1a range */
@@ -227,7 +227,7 @@ static void move_03(AnimObj *a)
     }
 }
 
-static void move_05(AnimObj *a)
+void move_05(AnimObj *a)
 {
     /* 0x412270: a touch trigger; d15 anim, d16-d18 objects it triggers, d19 re-arm time / 6 (-1:
        once), d1a 1: drawn behind, d1b tint, d1c score */
@@ -550,7 +550,7 @@ static void move_17(AnimObj *a)
     }
 }
 
-static void move_19(AnimObj *a)
+void move_19(AnimObj *a)
 {
     /* 0x413e60: breaks after d16 hits; d15 anim */
     int32_t *d = a->d;
@@ -741,7 +741,7 @@ static void attract_follow(int on, int n, AnimObj *a)
     g_attract[n].y = (int16_t)a->y;
 }
 
-static void move_10(AnimObj *a)
+void move_10(AnimObj *a)
 {
     /* 0x413130: on a trigger, after d1b / 6 s, plays d15 with up to two attractors (as Move_03),
        walks to path d16's start (modes 0 and 2) and follows it in mode d1c; d20 = 1 at its end */
