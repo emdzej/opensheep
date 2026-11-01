@@ -1,0 +1,59 @@
+name: CI
+
+# Builds the native tests and tools and the gasm module opensheep.wasm on each push to main and PR.
+# The tests need the original game data (not redistributable), so CI only compiles them; run them
+# locally against the disc (OPENSHEEP_DATA=<folder or image>).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: build (core, tests, tools)
+        run: cmake --build build -j
+
+      - name: check Python tools compile
+        run: python3 -m py_compile tools/*.py
+
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # The SDK version lives in tools/fetch-gasm-sdk.sh (GASM_VERSION, 0.16.0).
+      - name: fetch wasi-sdk and the gasm C SDK
+        run: tools/fetch-gasm-sdk.sh
+
+      - name: configure (gasm)
+        run: >-
+          cmake -S . -B build-gasm -DOPENSHEEP_PLATFORM=gasm -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS=-Werror
+          -DCMAKE_TOOLCHAIN_FILE=.deps/gasm-c-sdk/cmake/gasm-toolchain.cmake
+          -DWASI_SDK_PREFIX="$PWD/.deps/wasi-sdk"
+
+      - name: build opensheep.wasm
+        run: |
+          cmake --build build-gasm -j
+          ls -l build-gasm/opensheep.wasm
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: opensheep-wasm
+          path: build-gasm/opensheep.wasm
+          retention-days: 14
