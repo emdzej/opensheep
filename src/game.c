@@ -153,18 +153,18 @@ static bool vars_load(const char *path, const VarDef *defs)
 /* The flock's file as 0x41e850 last wrote it (an installed game's Data\misc, which the disc can't
    be): kept in the host's storage under the file's name. */
 enum { FLOCK_FILE_MAX = 0x10000 };
-static const char *const breed_names[] = { "Pastoral", "Factoral", "Longwool", "Neogenetic" };  /* 0x44d2d0 */
+/* The breeds' names: 0x44d2d0, four pointers (Pastoral, Factoral, Longwool, Neogenetic). */
+#define breed_name(b) exe_str(exe_u32(0x44d2d0 + 4 * ((b) & 3)))
 
 static char *flock_key(int breed)
 {
     static char key[32];
-    snprintf(key, sizeof key, "%s%s", breed_names[breed & 3], exe_str(0x44d2e0));
+    snprintf(key, sizeof key, "%s%s", breed_name(breed), exe_str(0x44d2e0));
     return key;
 }
 
 void player_vars_load(int character)
 {
-    static const char *const names[] = { "BoPeep", "Adam", "Motley", "Shep" };   /* 0x44c978 */
     const VarDef defs[] = {                                                     /* 0x44c918 */
         { "CREEP_SPEED", &g_pvars.creep_speed }, { "WALK_SPEED", &g_pvars.walk_speed },
         { "RUN_SPEED", &g_pvars.run_speed }, { "CREEP_RADIUS", &g_pvars.creep_radius },
@@ -172,7 +172,7 @@ void player_vars_load(int character)
         { NULL, NULL },
     };
     char path[64];
-    snprintf(path, sizeof path, "data\\misc\\%s.txt", names[character & 3]);
+    snprintf(path, sizeof path, "data\\misc\\%s.txt", exe_str(exe_u32(0x44c978 + 4 * (character & 3))));   /* BoPeep, Adam, Motley, Shep */
     if (!vars_load(path, defs)) fprintf(stderr, "Cannot load Player Vars file %s\n", path);
 }
 
@@ -190,7 +190,7 @@ void flock_vars_load(int breed)
         { NULL, NULL },
     };
     char path[64];
-    snprintf(path, sizeof path, "data\\misc\\%s.txt", breed_names[breed & 3]);
+    snprintf(path, sizeof path, "data\\misc\\%s.txt", breed_name(breed));
     char *saved = malloc(FLOCK_FILE_MAX);
     int n = saved ? plat_storage_get(flock_key(breed), saved, FLOCK_FILE_MAX) : -1;
     if (n > 0) vars_parse(saved, (size_t)n, defs);
