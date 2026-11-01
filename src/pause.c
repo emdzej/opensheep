@@ -97,9 +97,20 @@ static void call(uint32_t va)
     case 0x40f170: levels_tick(); break;
     case 0x40f220: levels_page(); break;
     case 0x40f2a0: flow_new_game(); break;
-    case 0x40f350:
-        /* TODO: the demos page (record, play, load and save a .REC: 0x40fd70, 0x40f990) */
-        pause_open(0x11);
+    case 0x40f350:                                     /* the demos page (RECORD): the item picked */
+        if (pick == 0 && g_record) {                   /* Record: the level from its start */
+            g_demo = 1;
+            g_next_level = g_level + 6 * g_world;
+            flow_new_game();
+        } else if (pick == 1) {                        /* Play the loaded recording */
+            g_demo = 2;
+            g_next_level = g_level + 6 * g_world;
+            flow_new_game();
+        } else if (pick == 0 || pick == 2 || pick == 3) {
+            if (pick == 2) demo_load_stored();
+            if (pick == 3 && g_demo == 3) demo_save_stored();
+            pause_open(0x11);
+        }
         break;
     case 0x40f400: case 0x40f480:
         /* TODO: the debug change of shepherd (0x4180e0, 0x4014c0) and of breed (0x41e850, 0x41e960,
@@ -194,7 +205,7 @@ bool pause_frame(Framebuffer *fb)
         g_pause ^= 1;
         if (g_pause) {
             pause_open(first);
-            /* TODO: while recording a demo, the menu ends it (0x4b0f9c 3, the streams closed) */
+            demo_finish();
         }
         g_menu_back = 1;
     }

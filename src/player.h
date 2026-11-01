@@ -13,11 +13,23 @@ extern int g_player_moved;              /* 0x4a40c5 */
 extern int g_score;                     /* 0x4a2068 */
 extern int32_t *g_chain[32][2];         /* 0x4bbbf8 */
 extern int (*g_demo_abort)(void);
+/* The demo streams (0x4ae434..0x4ae440): four run-length streams of {u16 value, u16 count}, the
+   buttons, input x, input y and magnitude. */
+enum { DEMO_MAX = 50000 };
+typedef struct { uint16_t v; int16_t n; } DemoRun;
+extern DemoRun *g_demo_stream[4];
+extern int g_demo_pos[4], g_demo_left[4], g_demo_len[4];
 /* 0x40fb40: a recording (.rec: four run counts, then the four streams of {u16 value, s16 ticks})
    into the demo streams; false (and the streams as they were) if it can't be read. */
 bool demo_load(const char *path);
 /* 0x406cc0's end: the streams set up for recording (g_demo 1) or playback (2). */
 void demo_start(void);
+/* The demos page's Load and Save (0x40fd70, 0x40f990), which ask Windows' file dialogs for a .rec:
+   here one recording kept in the host's storage. */
+bool demo_load_stored(void);
+void demo_save_stored(void);
+/* The pause menu opened while recording: the recording ends (g_demo 3), its last runs closed. */
+void demo_finish(void);
 
 void player_init(Player *p);                                   /* 0x418010 */
 void player_tick(Player *p);                                   /* 0x415f10 */

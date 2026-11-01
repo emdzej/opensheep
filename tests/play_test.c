@@ -6,6 +6,7 @@
 #include "moves.h"
 #include "movie.h"
 #include "play.h"
+#include "player.h"
 #include "rng.h"
 #include "sheep.h"
 #include "sound.h"
@@ -55,6 +56,25 @@ int main(void)
     for (int t = 0; t < 400 && !g_end; t++) play_tick();
     CHECK(g_end == 4, "end %d", g_end);
 
+    /* a demo: recorded from the level's start, ended by the menu (0x40f560), kept and read back, then
+       played to its end */
+    setenv("OPENSHEEP_STORAGE", "/tmp/opensheep_test", 1);
+    g_demo = 1;
+    start();
+    for (int t = 0; t < 50; t++) play_tick();
+    demo_finish();
+    CHECK(g_demo == 3 && g_demo_len[0] == 2 && g_demo_stream[0][1].n == 50, "recording %d: %d runs, %d",
+          g_demo, g_demo_len[0], g_demo_stream[0][1].n);
+    demo_save_stored();
+    g_demo_len[0] = 0;
+    CHECK(demo_load_stored() && g_demo_len[0] == 2 && g_demo_stream[0][1].n == 50, "stored recording");
+    g_demo = 2;
+    start();
+    int t = 0;
+    for (; t < 100 && g_demo == 2; t++) play_tick();
+    CHECK(g_demo == 3 && g_end == 6 && t == 51, "playback %d end %d after %d", g_demo, g_end, t);
+    g_demo = 0;
+
     /* the sound lists: effect 50 (generic.slf) loaded, 16 effect slots, the music streamed */
     start();
     int v = sound_play(50, 0, 0);
@@ -88,7 +108,7 @@ int main(void)
     movie_play(exe_str(0x44b990));
     CHECK(movie_active(), "Logos.bik");
     e = 0;
-    int t = 0;
+    t = 0;
     long lit = 0;
     for (; t < 800 && movie_active(); t++) {
         movie_frame(&mfb);

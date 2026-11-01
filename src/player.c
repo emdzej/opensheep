@@ -2,6 +2,7 @@
    (0x415f10), collision with the level (0x417ef0: zones, attractors 0x417310, special cells
    0x417550), animation (0x416db0) and the draw records (0x417070, the mouse cursor 0x40bec0). */
 #include "player.h"
+#include "platform.h"
 #include "exe.h"
 #include "level.h"
 #include "levels.h"
@@ -34,10 +35,7 @@ int g_effect_fired;                     /* 0x4b982c */
 int g_score;                            /* 0x4a2068 */
 int32_t *g_chain[32][2];                /* 0x4bbbf8: sheep following one another (effect 4) */
 
-/* ---------------------------------------------------------------- demo streams (0x4ae434..0x4ae440)
-   Four run-length streams of {u16 value, u16 count}: the buttons, input x, input y, magnitude. */
-enum { DEMO_MAX = 50000 };
-typedef struct { uint16_t v; int16_t n; } DemoRun;
+/* ---------------------------------------------------------------- demo streams (player.h) */
 static DemoRun demo_buf[4][DEMO_MAX + 2];
 DemoRun *g_demo_stream[4] = { demo_buf[0], demo_buf[1], demo_buf[2], demo_buf[3] };
 int g_demo_pos[4];                      /* 0x4ae0e8, 0x4ae0dc, 0x4ae0d4, 0x4ae0d0 */
@@ -246,6 +244,19 @@ static bool demo_record(int k, uint16_t v)
     return true;
 }
 
+void demo_finish(void)
+{
+    /* 0x40f560: the open run of each stream closed; the buffers hold DEMO_MAX + 2 */
+    if (g_demo != 1) return;
+    g_demo = 3;
+    for (int k = 0; k < 4; k++) {
+        g_demo_stream[k][g_demo_pos[k]].n = (int16_t)g_demo_left[k];
+        g_demo_len[k]++;
+        g_demo_pos[k]++;
+        g_demo_left[k] = 1;
+    }
+}
+
 static bool demo_play(int k, int32_t *out)
 {
     if (g_demo_pos[k] == g_demo_len[k]) return true;
@@ -258,14 +269,9 @@ static bool demo_play(int k, int32_t *out)
     return false;
 }
 
-bool demo_load(const char *path)
+/* 0x40fb40's reading: four counts, then each stream's runs; false (the streams untouched) if short */
+static bool demo_parse(const uint8_t *f, size_t n)
 {
-    size_t n;
-    uint8_t *f = file_load(path, &n);
-    if (!f) {
-        fprintf(stderr, "Cannot Load Demo recording %s\n", path);   /* 0x44c460 */
-        return false;
-    }
     int len[4];
     size_t need = 16;
     bool ok = n >= 16;
@@ -275,11 +281,7 @@ bool demo_load(const char *path)
         ok = len[k] >= 0 && len[k] <= DEMO_MAX;
         need += 4 * (size_t)(ok ? len[k] : 0);
     }
-    if (!ok || need > n) {
-        fprintf(stderr, "Cannot Load Demo recording %s\n", path);
-        free(f);
-        return false;
-    }
+    if (!ok || need > n) return false;
     const uint8_t *p = f + 16;
     for (int k = 0; k < 4; k++) {
         g_demo_len[k] = len[k];
@@ -290,8 +292,49 @@ bool demo_load(const char *path)
         }
         g_demo_pos[k] = 0;
     }
-    free(f);
     return true;
+}
+
+bool demo_load(const char *path)
+{
+    size_t n;
+    uint8_t *f = file_load(path, &n);
+    bool ok = f && demo_parse(f, n);
+    if (!ok) fprintf(stderr, "Cannot Load Demo recording %s\n", path);   /* 0x44c460 */
+    free(f);
+    return ok;
+}
+
+enum { REC_MAX = 16 + 4 * 4 * DEMO_MAX };
+static const char rec_key[] = "Recording.rec";
+
+bool demo_load_stored(void)
+{
+    uint8_t *f = malloc(REC_MAX);
+    int n = f ? plat_storage_get(rec_key, f, REC_MAX) : -1;
+    bool ok = n > 0 && demo_parse(f, (size_t)n);
+    if (!ok) fprintf(stderr, "Cannot Load Demo recording %s\n", rec_key);
+    free(f);
+    return ok;
+}
+
+void demo_save_stored(void)
+{
+    /* 0x40f990's writing: the four counts, then each stream's runs, little-endian */
+    uint8_t *f = malloc(REC_MAX), *p = f;
+    if (!f) return;
+    for (int k = 0; k < 4; k++, p += 4)
+        for (int b = 0; b < 4; b++) p[b] = (uint8_t)((uint32_t)g_demo_len[k] >> 8 * b);
+    for (int k = 0; k < 4; k++)
+        for (int i = 0; i < g_demo_len[k] && i < DEMO_MAX + 2; i++, p += 4) {
+            DemoRun r = g_demo_stream[k][i];
+            p[0] = (uint8_t)r.v;
+            p[1] = (uint8_t)(r.v >> 8);
+            p[2] = (uint8_t)r.n;
+            p[3] = (uint8_t)((uint16_t)r.n >> 8);
+        }
+    plat_storage_set(rec_key, f, (int)(p - f));
+    free(f);
 }
 
 void demo_start(void)
