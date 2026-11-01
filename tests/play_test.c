@@ -4,6 +4,7 @@
 #include "exe.h"
 #include "level.h"
 #include "moves.h"
+#include "movie.h"
 #include "play.h"
 #include "rng.h"
 #include "sheep.h"
@@ -78,6 +79,27 @@ int main(void)
     CHECK(e > 1.0, "music silent");
     sound_stop_streams(-1);
     sound_free_all();
+
+    /* the logos movie: pictures and sound, 25 fps over the 62.5 Hz frames, ends by itself */
+    static uint16_t px[640 * 480];
+    Framebuffer mfb = { 640, 480, 640, px };
+    movie_play(exe_str(0x44b990));
+    CHECK(movie_active(), "Logos.bik");
+    e = 0;
+    int t = 0;
+    long lit = 0;
+    for (; t < 800 && movie_active(); t++) {
+        movie_frame(&mfb);
+        if (t == 300)
+            for (int i = 0; i < 640 * 480; i++) lit += px[i] != 0;
+        sound_frame();
+        const float *o = sound_output(&frames);
+        for (int i = 0; i < frames * 2; i++) e += fabs(o[i]);
+    }
+    /* the last of the 276 frames is due at 11000 ms, the 689th app frame */
+    CHECK(t == 689, "logos over after %d frames", t);
+    CHECK(lit > 640 * 400, "logos picture %ld lit", lit);
+    CHECK(e > 100.0, "logos silent %.1f", e);
 
     /* the texts: "go" of the race's count-down, and a wide format with the '$' bank switch */
     CHECK(strings_load(), "GameStrings");

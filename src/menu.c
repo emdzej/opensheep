@@ -4,6 +4,7 @@
 #include "font.h"
 #include "hud.h"
 #include "input.h"
+#include "movie.h"
 #include "objects.h"
 #include "play.h"
 #include "player.h"
@@ -50,7 +51,7 @@ static int blink;                   /* 0x65ffb4 */
 static int8_t lat_right, lat_left, lat_up, lat_down, lat_button;  /* 0x65ff38, 0x65ff8c, 0x660009, 0x660008, 0x65ff9c */
 float g_sfx_volume = 1.0f;          /* 0x4b9850 */
 float g_music_volume = 1.0f;        /* 0x4b9860 */
-int g_sfx_level;                    /* 0x451848 */
+int g_sfx_level = 11;               /* 0x451848: 0x40d380 with no saved setting, ftol(1.0 * 11.0 (0x44830c)) */
 int g_cheats;                       /* 0x4b0fd4 */
 int g_menu_back;                    /* 0x4b9638 */
 
@@ -460,10 +461,11 @@ static bool held_new(int dik) { return g_keyheld[dik] > 0 && g_keyheld[dik] < 6;
 
 static void play_movie(const char *name)
 {
-    /* "data\biks\%s.bik" (0x451cb4) in the movie player (0x403a30). TODO: Bink */
+    /* "data\biks\%s.bik" (0x451cb4) */
     char path[64];
     snprintf(path, sizeof path, exe_str(0x451cb4), name);
-    (void)path;
+    flow_latch_key();
+    movie_play(path);
 }
 
 static void new_game(int world)

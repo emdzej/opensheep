@@ -16,6 +16,7 @@
 #include "credits.h"
 #include "player.h"
 #include "sprites.h"
+#include "movie.h"
 #include "sound.h"
 #include "surface.h"
 #include "world.h"
@@ -67,6 +68,8 @@ bool flow_any_key(void)
     return false;
 }
 
+void flow_latch_key(void) { key_latch = 1; }
+
 /* 0x4094d0: the levels 1-4 of a world in this build. */
 static int levels_in(int world)
 {
@@ -88,9 +91,8 @@ static int next_world(int w)
 
 static void movie(const char *path)
 {
-    /* the movie player (0x403a30). TODO: Bink */
-    (void)path;
     key_latch = 1;
+    movie_play(path);
 }
 
 void flow_world_movie(int world)

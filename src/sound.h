@@ -13,6 +13,7 @@
 enum { SOUND_RATE = 44100, SOUND_CHANNELS = 2 };
 
 extern float g_sfx_volume, g_music_volume;   /* 0x4b9850, 0x4b9860 (menu.c) */
+extern int g_sfx_level;                     /* 0x451848 (menu.c): the effects' slider, 0..11 */
 extern int g_sound_loaded;                   /* 0x4a19c8: the lists are loaded */
 extern int g_music, g_music2;                /* 0x4a40cc the level's music, 0x4a40d0 a looping stream over it */
 
@@ -55,6 +56,10 @@ bool snd_update(int v);
 void snd_stop(int v);
 /* 0x406700: the voice at the object (its volume following it, if looping). */
 void sound_follow(int v, AnimObj *a);
+
+/* An outside source added into the mix (the movie's sound, Bink's own buffer); NULL: none. fn adds
+   n stereo frames at SOUND_RATE into dst. */
+void sound_feed(void (*fn)(float *dst, int n));
 
 /* Mix one app frame (16 ms) of output; the host takes it with sound_output. */
 void sound_frame(void);

@@ -27,6 +27,8 @@ bool flow_frame(Framebuffer *fb);
 void flow_start(int state);
 /* 0x422930: a key, a pad button or the mouse button went down (not one still held from before). */
 bool flow_any_key(void);
+/* 0x450608 = 1: a key still held when a screen starts is no press. */
+void flow_latch_key(void);
 /* The movie after world n ("World0n.bik", 0x44b218). */
 void flow_world_movie(int n);
 /* 0x40f2a0: a new game at world g_next_level / 6, level g_next_level % 6 (the level state). */

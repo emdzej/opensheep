@@ -12,6 +12,7 @@
 #include "input.h"
 #include "level.h"
 #include "levels.h"
+#include "movie.h"
 #include "moves.h"
 #include "objects.h"
 #include "play.h"
@@ -139,7 +140,16 @@ static bool frame(void)
         plat_mouse(&mx, &my, &dx, &dy, &buttons);
         g_mouse_button = buttons & 1;
         Framebuffer *fb = plat_fb();
-        bool on = flow_frame(fb);
+        bool on = true;
+        /* the main loop (0x438350): a movie plays in place of App_Frame. The frame that starts one
+           isn't shown (0x66b8e0, App_PresentIfNeeded 0x4054d0): the movie's first frame, due at
+           once, is drawn over it before the present. */
+        if (movie_active()) {
+            movie_frame(fb);
+        } else {
+            on = flow_frame(fb);
+            if (on && movie_active()) movie_frame(fb);
+        }
         plat_present();
         return on;
     }

@@ -43,7 +43,7 @@ foreach(t xp_test play_test)
 endforeach()
 
 # Development tools on the same core.
-foreach(t overview)
+foreach(t overview bik)
   add_executable(${t} tools/${t}.c)
   target_link_libraries(${t} opensheep_core)
   target_compile_options(${t} PRIVATE ${WARN})

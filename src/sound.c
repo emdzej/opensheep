@@ -745,6 +745,10 @@ static void mix_voice(Voice *o, float *dst, int n)
     }
 }
 
+static void (*feed)(float *dst, int n);
+
+void sound_feed(void (*fn)(float *dst, int n)) { feed = fn; }
+
 void sound_frame(void)
 {
     /* 16 ms of output, the remainder carried: 44100 / 62.5 = 705.6 frames */
@@ -755,6 +759,7 @@ void sound_frame(void)
     memset(out, 0, sizeof(float) * (size_t)out_n * SOUND_CHANNELS);
     for (int i = 1; i <= VOICES; i++)
         if (voices[i].used && voices[i].ds_playing) mix_voice(&voices[i], out, out_n);
+    if (feed) feed(out, out_n);
     for (int i = 0; i < out_n * SOUND_CHANNELS; i++) out[i] = out[i] > 1.0f ? 1.0f : out[i] < -1.0f ? -1.0f : out[i];
 }
 
