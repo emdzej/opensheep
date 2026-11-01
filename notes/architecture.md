@@ -60,7 +60,7 @@ states >= 100, `+0x1c` / `+0x20` draw hooks, `+0x2c` tile animations, `+0x30` re
 The hooks and move routines are exe addresses; the port maps each to its C routine (`src/levels.c`,
 `src/moves.c`), and one without a port logs `... not ported`.
 
-`Level_LoadBLO` (0x4072d0): see `docs/formats.md`. Tiles are 32x24 rgb565, re-packed at load into
+`Level_LoadBLO` (0x4072d0): see `notes/formats.md`. Tiles are 32x24 rgb565, re-packed at load into
 the surface's pixel format (identity in the 16-bit rgb565 mode). Level paths: `World_SetPaths`
 (0x4033a0) builds `Data\World0<w>\<name>\` (`World00` for level 0) from the descriptor's UTF-16
 name and mounts `main.xp`, `sound.xp`, `World00.xp` / `World%02d.xp`; `Level_Path` (0x401000) adds

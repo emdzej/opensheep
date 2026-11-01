@@ -4,7 +4,7 @@ The plan was a faithful C11 port of **Sheep** (Mind's Eye Productions / Empire I
 function by function from `Sheep.exe`, shipped as `opensheep.wasm` for [gasm](https://gasm.emdzej.pl)
 0.16.0, with a site at [opensheep.emdzej.pl](https://opensheep.emdzej.pl). It is done; the original
 plan is in the git history. The rules it set are in [AGENTS.md](AGENTS.md), the findings in
-[docs/architecture.md](docs/architecture.md) and [docs/formats.md](docs/formats.md).
+[notes/architecture.md](notes/architecture.md) and [notes/formats.md](notes/formats.md).
 
 ## What was built
 

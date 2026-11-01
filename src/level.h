@@ -1,4 +1,4 @@
-/* The loaded level: the .BLO file (docs/formats.md), its tile surfaces and the scrolling camera.
+/* The loaded level: the .BLO file (notes/formats.md), its tile surfaces and the scrolling camera.
    Fields name the original globals they stand for. */
 #pragma once
 #include <stddef.h>

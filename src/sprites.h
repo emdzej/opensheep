@@ -1,4 +1,4 @@
-/* Sprite banks (.SPR files, docs/formats.md) and the run-length sprite blitter. */
+/* Sprite banks (.SPR files, notes/formats.md) and the run-length sprite blitter. */
 #pragma once
 #include <stdint.h>
 #include <stdbool.h>

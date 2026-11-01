@@ -25,7 +25,6 @@ export default defineConfig({
 
     nav: [
       { text: "User guide", link: "/guide/", activeMatch: "/guide/" },
-      { text: "Internals", link: "/architecture", activeMatch: "/(architecture|formats)" },
       { text: "Gallery", link: "/gallery" },
       // A static app in docs/public/play/: target _self makes it a full page load, not a VitePress route.
       { text: "Play", link: "/play/", target: "_self" },
@@ -43,15 +42,6 @@ export default defineConfig({
             { text: "Controls", link: "/guide/controls" },
             { text: "Developer options", link: "/guide/developer" },
             { text: "Building", link: "/guide/build" },
-          ],
-        },
-      ],
-      "/": [
-        {
-          text: "Internals",
-          items: [
-            { text: "Engine architecture", link: "/architecture" },
-            { text: "File formats", link: "/formats" },
           ],
         },
       ],

@@ -93,7 +93,9 @@ It hasn't been played through end to end yet, nor compared with the original sid
 - `tools/` — format decoders and development aids (Python, and `bik` / `overview` in C).
 - `PLAN.md` — what was built, and what is left.
 - `docs/` — the site (VitePress, [opensheep.emdzej.pl](https://opensheep.emdzej.pl)): the user guide, the
-  browser player (`docs/public/play/`) and the reverse-engineering notes, `architecture.md` and `formats.md`.
+  gallery and the browser player (`docs/public/play/`).
+- `notes/` — the reverse-engineering notes, kept out of the site: `architecture.md` (the original
+  program and where its parts live in the port) and `formats.md` (every file the game reads).
 
 ## License
 

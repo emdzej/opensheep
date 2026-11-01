@@ -1,4 +1,4 @@
-/* .xp archives (docs/formats.md): data first, then a directory tree, then a 20-byte footer
+/* .xp archives (notes/formats.md): data first, then a directory tree, then a 20-byte footer
    {u32 ?, u32 dir_off, u32 dir_len, "XCELZLIB"} (Xp_Open 0x43ab10). The directory is flattened at
    mount into a sorted list of full upper-case paths. */
 #include "xp.h"

@@ -14,8 +14,8 @@ hero:
       link: /play/
       target: _self
     - theme: alt
-      text: How it works
-      link: /architecture
+      text: Gallery
+      link: /gallery
 
 features:
   - title: Faithful
