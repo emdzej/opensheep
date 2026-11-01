@@ -814,7 +814,9 @@ static void sheep_steer(Sheep *a)
     }
     a->d[0x19] = a->d[0x40];
     double target = (double)want_speed / (double)(float)want_n - (double)0.01f;
-    if (target < 0.0) target = 0.0;
+    /* fcom + test ah, 1: C0 is set for below and for unordered, so a NaN target (0 / 0: no pull counted)
+       is 0 too; a plain < would keep the NaN and let the speed fall without end */
+    if (!(target >= 0.0)) target = 0.0;
     double accel = (double)(float)g_fvars.sheep_accel * (double)0.001f;
     if ((double)a->speed <= target) {
         double v = accel + (double)a->speed;
