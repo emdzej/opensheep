@@ -255,6 +255,8 @@ static void banks_from_table(uint32_t table, int first, uint32_t ids)
     }
 }
 
+void bank_table_load(uint32_t table, int first) { banks_from_table(table, first, 0); }
+
 void actor_banks_load(void)
 {
     banks_from_table(0x44a348, 0, desc_u32(DESC_PLAYER_BANKS));

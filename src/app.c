@@ -124,7 +124,7 @@ bool app_frame(void)
         if (trace && ++ticks % 30 == 0) {
             fprintf(stderr, "t%d shepherd %d,%d st %d | saved %d out %d |", ticks, g_player.ix, g_player.iy,
                     g_player.state, g_saved, g_sheep_out);
-            for (int i = 0; i < g_nsheep; i++)
+            for (int i = 0; i < g_nsheep && i < MAX_SHEEP; i++)
                 fprintf(stderr, " %d,%d/%d", g_sheep[i].ix, g_sheep[i].iy, g_sheep[i].state);
             fprintf(stderr, "\n");
         }

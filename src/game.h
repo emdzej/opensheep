@@ -70,6 +70,8 @@ typedef struct {
 enum { MAX_SPECIAL = 256 };
 extern Special g_special[MAX_SPECIAL];
 void specials_load(void);                   /* part of 0x401950 */
+/* A bank table (8-byte entries {flags, name}) into banks first.. (0x401050 per entry). */
+void bank_table_load(uint32_t table, int first);
 void actor_banks_load(void);                /* 0x4014c0, 0x401560: the shepherd's and the flock's banks */
 
 /* ---------------------------------------------------------------- the shepherd (0x4b9788) */
