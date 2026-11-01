@@ -7,3 +7,4 @@ build-gasm/
 __pycache__/
 *.iso
 *.exe
+sheep_game.exe
