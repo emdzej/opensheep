@@ -16,6 +16,7 @@
 #include "credits.h"
 #include "player.h"
 #include "sprites.h"
+#include "sound.h"
 #include "surface.h"
 #include "world.h"
 #include <stdio.h>
@@ -32,6 +33,7 @@ bool g_quit;
 static int key_latch = 1;           /* 0x450608: set when a screen starts, so a key still held is no press */
 static int load_blink;              /* 0x4a3b54 */
 static int tick_rest;               /* 0x4a19d8: the ms short of a tick */
+static unsigned sound_phase;        /* 0x4b10d0 */
 static Surface *load_pic;           /* 0x4b0f48 */
 static uint16_t load_bar[400];      /* 0x4ae104 */
 enum { LOAD_STAGE = 5 };            /* 0x4ae0ac when 0x406cc0 is done */
@@ -270,6 +272,12 @@ static bool level_begin(void)
     }
     g_hud_style = g_level == 0 ? 0 : g_world != 9 ? 1 : 5;
     loading_start();
+    if (g_sound_fx) {
+        /* 0x406cc0 */
+        sound_stop_streams(-1);
+        sound_stop_sfx(-1);
+        sound_tick();
+    }
     level_hook(DESC_RELEASE);
     if (!level_load_resources()) return false;
     level_start();
@@ -377,15 +385,28 @@ static void level_frame(Framebuffer *fb)
     int n = tick_rest / ms;
     tick_rest %= ms;
     if (n > 6) n = 6;
+    bool ticked = n > 0;
     while (n-- > 0) play_tick();
+    if (ticked && sound_phase++ & 1) sound_tick();     /* every other frame that ticked */
     memset(fb->pixels, 0, (size_t)fb->pitch * fb->h * 2);
     play_draw(fb);
+}
+
+/* After a level and before a screen, with SOUND_FX: everything stops and is freed. */
+static void sound_release(void)
+{
+    if (!g_sound_fx) return;
+    sound_stop_sfx(-1);
+    sound_stop_streams(-1);
+    sound_tick();
+    sound_free_all();
 }
 
 static void level_end(void)
 {
     /* the level is over: free it and act on its end code */
     level_release();
+    sound_release();
     switch (g_end) {
     case 1: case 3: case 4: case 5: case 7:
         if (g_theme == 9) g_end = 1;
@@ -413,10 +434,11 @@ static void level_end(void)
 }
 
 /* Level_ReleaseTiles 0x4077b0 and 0x40d030 before a screen: the level's tiles, animations and every
-   sprite bank. TODO: the sound and music stop (0x419490, 0x4193c0, 0x41ef60) */
+   sprite bank, and the sound. */
 static void leave_level(void)
 {
     level_release();
+    sound_release();
     anims_free();
     g_hint_shown = 0;
     hint_text_free();
@@ -433,7 +455,7 @@ static void splash_frame(Framebuffer *fb)
     }
     if (g_app_sub == 0) {
         static const uint32_t pic[] = { 0x44b948, 0x44b928, 0x44b908, 0x44b8dc, 0x44b908 };
-        if (st != APP_END4) leave_level();   /* TODO: the sound and music stop as leave_level's */
+        if (st != APP_END4) leave_level();
         surface_free(splash);                /* (the original drops the last one) */
         splash = surface_load_bmp(exe_str(pic[st - APP_END1]));
         splash_ticks = 600;
@@ -526,6 +548,11 @@ bool flow_frame(Framebuffer *fb)
             loading_draw(fb);
             if (g_demo == 2 || g_world == 0 || g_level == 0 || flow_any_key()) {
                 loading_end();
+                if (g_sound_fx) {
+                    g_music = sound_stream(100, 1, 1);
+                    if (g_music) snd_set_vol(g_music, 0.95f);
+                    sound_tick();
+                }
                 g_app_sub = 2;
             }
         } else {

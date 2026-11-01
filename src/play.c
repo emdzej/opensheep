@@ -12,6 +12,7 @@
 #include "render.h"
 #include "rng.h"
 #include "sheep.h"
+#include "sound.h"
 #include "sprites.h"
 #include "world.h"
 #include "xp.h"
@@ -50,7 +51,7 @@ bool level_load_resources(void)
     level_load_sprite_banks();
     anims_load(world_level_path(".anm"));
     tile_anims_load();
-    /* TODO: the level's sounds (0x401730) */
+    sound_lists_load();
     objects_load(world_level_path(".pos"));
     paths_load();
     game_init_tables();

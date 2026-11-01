@@ -4,6 +4,7 @@
 #include "level.h"
 #include "render.h"
 #include "rng.h"
+#include "sound.h"
 #include "sprites.h"
 #include "world.h"
 #include "xp.h"
@@ -216,10 +217,33 @@ void anim_set_frame(AnimObj *a)
             c += 2;
             break;
         case 3:
-            /* Sound: 0 start a looping sound while on screen, 1 play sound c[5..6], 2 play one of c[2]
-               sounds from c[5..6] (picked with rand()). Not while loading. TODO: sound. */
+            /* Sound: 0 a looping sound while on screen (stopped once it has faded to nothing), 1 sound
+               c[5..6], 2 one of c[2] sounds from c[5..6] (picked with rand()). Not while loading. */
             if (end - c < 9) { done = true; break; }
-            if (!g_loading && c[1] == 2) (void)crt_rand();
+            if (!g_loading) {
+                int id = c[5] | c[6] << 8;
+                if (c[1] == 0) {
+                    if (!a->sound_on) {
+                        int v = sound_play_at(a, id, 1, 0);
+                        if (v) { a->sound_on = 1; a->sound = v; }
+                    } else if (a->sound && snd_vol(a->sound) == 0.0f) {
+                        snd_stop(a->sound);
+                        a->sound_on = 0;
+                        a->sound = 0;
+                    }
+                } else if (c[1] == 1 || c[1] == 2) {
+                    if (a->sound_on && a->sound) {
+                        sound_drop(a->sound);
+                        a->sound_on = 0;
+                        a->sound = 0;
+                    }
+                    if (c[1] == 2) {
+                        int r = crt_rand();
+                        if (c[2]) id = (id + r % c[2]) & 0xffff;   /* (the original divides by c[2] = 0) */
+                    }
+                    sound_play_at(a, id, 0, 0);
+                }
+            }
             c += 9;
             break;
         default:
@@ -281,10 +305,13 @@ int anim_new(int x, int y, int anim, int dir, int type)
 
 void anim_kill(AnimObj *a)
 {
-    /* 0x4025c0 (TODO: stop its sound) */
+    /* 0x4025c0 */
     if (a->id) g_obj_by_id[a->id] = -1;
-    a->sound_on = 0;
-    a->sound = 0;
+    if (a->sound_on && a->sound) {
+        sound_drop(a->sound);
+        a->sound_on = 0;
+        a->sound = 0;
+    }
     a->type = -1;
 }
 

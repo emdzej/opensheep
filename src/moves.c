@@ -551,7 +551,7 @@ void move_19(AnimObj *a)
         a->sub = 1;
     } else if (a->sub == 1 && d[0x16] != 0) {
         if (d[0x22] != -1 && --d[0x16] < 1) {
-            /* TODO: stop its sound (d42) */
+            sound_drop(a->sound);
             a->sound = 0;
             anim_kill(a);
         }
@@ -561,8 +561,9 @@ void move_19(AnimObj *a)
 
 void anim_stop_sound(AnimObj *a)
 {
-    /* 0x406650 and the voice list 0x4b9984 (TODO: the mixer) */
+    /* 0x406650 and the voice list 0x4b9984 */
     if (!a->sound) return;
+    sound_drop(a->sound);
     a->sound_on = 0;
     a->sound = 0;
 }

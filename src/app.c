@@ -17,6 +17,7 @@
 #include "play.h"
 #include "player.h"
 #include "sheep.h"
+#include "sound.h"
 #include "render.h"
 #include "rng.h"
 #include "platform.h"
@@ -128,7 +129,7 @@ static void draw_gallery(Framebuffer *fb)
 
 static int key_down(int key) { return plat_key_down(key); }
 
-bool app_frame(void)
+static bool frame(void)
 {
     if (!plat_poll()) return false;
     if (front_end && !viewer) {
@@ -194,6 +195,13 @@ bool app_frame(void)
     if (gallery) draw_gallery(fb);
     plat_present();
     return true;
+}
+
+bool app_frame(void)
+{
+    bool on = frame();
+    sound_frame();          /* this frame's 16 ms of sound, for the host to take */
+    return on;
 }
 
 void app_exit(void)

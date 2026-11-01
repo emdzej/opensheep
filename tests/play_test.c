@@ -7,6 +7,8 @@
 #include "play.h"
 #include "rng.h"
 #include "sheep.h"
+#include "sound.h"
+#include <math.h>
 #include "vfs_host.h"
 #include "world.h"
 #include <stdio.h>
@@ -49,6 +51,33 @@ int main(void)
     CHECK(g_level_over == 1, "level over %d at the time limit", g_level_over);
     for (int t = 0; t < 400 && !g_end; t++) play_tick();
     CHECK(g_end == 4, "end %d", g_end);
+
+    /* the sound lists: effect 50 (generic.slf) loaded, 16 effect slots, the music streamed */
+    start();
+    int v = sound_play(50, 0, 0);
+    CHECK(v != 0, "effect 50");
+    int n = 1;
+    while (n < 20 && sound_play(50, 0, 0)) n++;
+    CHECK(n == 16, "%d effect slots", n);
+    sound_stop_sfx(-1);
+    sound_tick();
+    CHECK(sound_play(50, 0, 0) != 0, "a slot after the stop");
+    sound_stop_sfx(-1);
+    int m = sound_stream(100, 1, 1);
+    CHECK(m != 0, "music");
+    snd_set_vol(m, 0.95f);
+    sound_tick();
+    double e = 0;
+    int frames;
+    for (int t = 0; t < 30; t++) {
+        sound_frame();
+        const float *o = sound_output(&frames);
+        for (int i = 0; i < frames * 2; i++) e += fabs(o[i]);
+    }
+    CHECK(frames == 705 || frames == 706, "%d frames", frames);
+    CHECK(e > 1.0, "music silent");
+    sound_stop_streams(-1);
+    sound_free_all();
 
     /* the texts: "go" of the race's count-down, and a wide format with the '$' bank switch */
     CHECK(strings_load(), "GameStrings");

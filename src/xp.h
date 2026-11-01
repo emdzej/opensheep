@@ -16,6 +16,8 @@ uint8_t *file_load(const char *path, size_t *size);
 /* Size of a file without loading it; -1 if missing. */
 int64_t file_size(const char *path);
 bool file_exists(const char *path);
+/* A loose file on the disc, to read as it is used (the music); NULL if missing. */
+struct VfsFile *file_open(const char *path);
 
 /* Tools and tests: the entries of mounted archive `a` (0 = first mounted). NULL past the end. */
 const char *xp_entry(int a, int i);

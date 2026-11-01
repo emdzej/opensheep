@@ -168,6 +168,13 @@ int64_t file_size(const char *path)
 
 bool file_exists(const char *path) { return file_size(path) >= 0; }
 
+VfsFile *file_open(const char *path)
+{
+    char p[512];
+    norm(path, p, sizeof p);
+    return vfs_open(p);
+}
+
 const char *xp_entry(int a, int i)
 {
     if (a < 0 || a >= nmounted || i < 0 || i >= mounted[a]->n) return NULL;

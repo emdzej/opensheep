@@ -20,6 +20,7 @@
    level=<world>.<level> -> --level. */
 #include "platform.h"
 #include "app.h"
+#include "sound.h"
 #include "vfs.h"
 #include <gasm.h>
 #include <stdio.h>
@@ -340,6 +341,7 @@ GASM_EXPORT("gasm_init") int32_t opensheep_gasm_init(void)
     gasm_set_frame_rate((double)RATE_NUM / RATE_DEN);
     gasm_input_mode(GASM_INPUT_KEYS_RAW);                  /* the keyboard is ours: no keymap pads */
     init_key_table();
+    gasm_audio_config(SOUND_RATE, SOUND_CHANNELS);
     if (!mount_image_asset("cd") && !mount_image_asset("rom") && !mount_file_assets()) {
         plat_error("Sheep", "game data not found: pass your Sheep disc image as asset \"cd\" "
                    "(gasm-run opensheep.wasm --asset cd=Sheep.iso), or the CD's files (--asset-dir <folder>)");
@@ -378,6 +380,9 @@ GASM_EXPORT("gasm_frame") void opensheep_gasm_frame(void)
         app_exit();
         __wasi_proc_exit(0);
     }
+    int n;
+    const float *pcm = sound_output(&n);
+    gasm_audio_push(pcm, (uint32_t)n);
 }
 
 GASM_EXPORT("gasm_exit") void opensheep_gasm_exit(void)
