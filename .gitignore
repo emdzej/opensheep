@@ -1,0 +1,9 @@
+cd/
+re/
+out/
+build/
+build-gasm/
+.deps/
+__pycache__/
+*.iso
+*.exe
