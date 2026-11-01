@@ -1,4 +1,5 @@
 #include "levels_int.h"
+#include "hud.h"
 #include "input.h"
 #include <stdlib.h>
 #include <string.h>
@@ -413,6 +414,12 @@ static void lv25_tick(void)
     }
 }
 
+static void lv25_draw(void)
+{
+    /* 0x42ab30: the count-down */
+    if (count != -1) text_draw(str_get(count + 0x10e), 0xf0, 0x118);
+}
+
 static void lv25_hop_player(int32_t *a)
 {
     /* 0x42ab60 */
@@ -788,7 +795,7 @@ static int npellets;              /* 0x66001c */
 static int fast45;                /* 0x660020: power pill ticks */
 static int lot45;                 /* 0x660034: which lot of pellets is being eaten */
 static int left45[3];             /* 0x66002c, 0x660028, 0x660024 */
-static int lives45;               /* 0x660030 */
+int g_lives45;                    /* 0x660030 */
 
 static bool pellet_anim(int id)
 {
@@ -814,7 +821,7 @@ static void lv45_init(void)
     left45[1] = 0x58;
     left45[2] = 0x4a;
     lot45 = 0;
-    lives45 = 3;
+    g_lives45 = 3;
     g_hud_style = 3;
     player_set_state(&g_player, 100);
     fast45 = 0;
@@ -949,7 +956,7 @@ static void lv45_move_01(AnimObj *a)
 
 static void lv45_lose_life(void)
 {
-    if (--lives45 == 0) g_end = 7;
+    if (--g_lives45 == 0) g_end = 7;
 }
 
 static void lv45_move_02(AnimObj *a)
@@ -1024,7 +1031,7 @@ static void lv45_move_03(AnimObj *a)
     case 3:
         if (a->state == 2) {
             anim_set(a->slot, d[0x1d], (a->dir + 4) & 0xf);
-            if (--lives45 == 0) {
+            if (--g_lives45 == 0) {
                 g_end = 7;
                 a->sub = 1;
                 d[0x22] = -1;
@@ -1062,6 +1069,7 @@ bool bonus_call(uint32_t va)
     case 0x423e70: lv15_tick(); return true;
     case 0x42a920: lv25_init(); return true;
     case 0x42aa30: lv25_tick(); return true;
+    case 0x42ab30: lv25_draw(); return true;
     case 0x4258b0: lv35_init(); return true;
     case 0x4258e0: lv35_tick(); return true;
     case 0x429350: lv45_init(); return true;

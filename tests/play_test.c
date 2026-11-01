@@ -1,5 +1,6 @@
 /* Level 1.1 in play, headless: the flock stays put with no input (no trigger fires on its own), a
    sheep put on the horsebox ramp is penned, and the level clock ends the level. */
+#include "hud.h"
 #include "exe.h"
 #include "level.h"
 #include "moves.h"
@@ -48,6 +49,14 @@ int main(void)
     CHECK(g_level_over == 1, "level over %d at the time limit", g_level_over);
     for (int t = 0; t < 400 && !g_end; t++) play_tick();
     CHECK(g_end == 4, "end %d", g_end);
+
+    /* the texts: "go" of the race's count-down, and a wide format with the '$' bank switch */
+    CHECK(strings_load(), "GameStrings");
+    CHECK(str_get(0x110)[0] != 0, "string 0x110 empty");
+    uint16_t fmt[16], buf[16];
+    wfmt(buf, 16, exe_wtext(0x44cb48, fmt, 16), 3, 7);
+    CHECK(buf[0] == '$' && buf[1] == '0' && buf[2] == '3' && buf[3] == ':' && buf[5] == '7' && !buf[6],
+          "format");
 
     printf("%s\n", fails ? "FAILED" : "ok");
     return fails ? 1 : 0;

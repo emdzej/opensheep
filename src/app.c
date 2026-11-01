@@ -3,9 +3,12 @@
    PageDown for the previous / next level; G: sprite gallery of the loaded banks, [ ] pick the bank). The front end and game states replace it as they are ported. */
 #include "app.h"
 #include "exe.h"
+#include "hud.h"
+#include "xp.h"
 #include "input.h"
 #include "level.h"
 #include "levels.h"
+#include "moves.h"
 #include "objects.h"
 #include "play.h"
 #include "player.h"
@@ -29,6 +32,8 @@ static bool load(int world, int level)
     /* 0x406cc0 in mode 1 runs the level's release hook before the tiles go */
     if (g_level != 0 && !viewer) level_hook(DESC_RELEASE);
     if (!world_select(world, level)) return false;
+    /* the level state (0x40f2a0, case 3) picks the panel before 0x406cc0; init hooks may change it */
+    g_hud_style = level == 0 ? 0 : world != 9 ? 1 : 5;
     if (!viewer && level != 0) {
         if (!level_load_resources()) return false;
         level_start();
@@ -83,6 +88,9 @@ bool app_init(int argc, char **argv)
     g_input_mode = 1;
     if (!exe_load()) { plat_error("OpenSheep", exe_error()); return false; }
     if (!plat_init("OpenSheep", 640, 480)) return false;
+    /* 0x438350: main.xp is mounted and the texts loaded once, at start-up */
+    xp_mount("main.xp");
+    if (!strings_load()) fprintf(stderr, "no GameStrings\n");
     if (!load(world, level) && !load(0, 0)) { plat_error("OpenSheep", "cannot load the level"); return false; }
     return true;
 }

@@ -1,4 +1,5 @@
 #include "play.h"
+#include "hud.h"
 #include "level.h"
 #include "input.h"
 #include "levels.h"
@@ -43,7 +44,7 @@ bool level_load_resources(void)
     sprite_bank_load_misc(SPR_BANK_MISC, "Misc.spr");
     sprite_bank_load_misc(SPR_BANK_TEXT_YELLOW, "TextYellow.spr");
     sprite_bank_load_misc(SPR_BANK_TEXT_BLUE, "TextBlue.spr");
-    /* TODO: the CPUI banks (0x44a3f8) */
+    bank_table_load(0x44a3f8, SPR_BANK_CPUI);
     level_load_sprite_banks();
     anims_load(world_level_path(".anm"));
     tile_anims_load();
@@ -226,5 +227,9 @@ void play_draw(Framebuffer *fb)
     player_collect(&g_player);
     sheep_collect();
     objects_collect();
+    sprite_target(fb);
+    level_hook(DESC_DRAW1);
     render_sorted(fb);
+    level_hook(DESC_DRAW2);
+    hud_draw();
 }
