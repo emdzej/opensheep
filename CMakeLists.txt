@@ -36,8 +36,15 @@ target_compile_options(opensheep_core PRIVATE ${WARN})
 target_include_directories(opensheep_core PUBLIC src)
 
 # Tests read the data through the file layer (./cd, or OPENSHEEP_DATA=<dir|image>).
-foreach(t xp_test)
+foreach(t xp_test play_test)
   add_executable(${t} tests/${t}.c)
+  target_link_libraries(${t} opensheep_core)
+  target_compile_options(${t} PRIVATE ${WARN})
+endforeach()
+
+# Development tools on the same core.
+foreach(t overview)
+  add_executable(${t} tools/${t}.c)
   target_link_libraries(${t} opensheep_core)
   target_compile_options(${t} PRIVATE ${WARN})
 endforeach()
