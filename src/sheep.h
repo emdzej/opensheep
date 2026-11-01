@@ -21,6 +21,7 @@ void sheep_kind_drop(int32_t *s);                              /* 0x41c5b0 */
 void sheep_launch(int32_t *s, int dir, int count, int height, int then, int speed);        /* 0x41a820 */
 void sheep_launch_sound(int32_t *s, int dir, int count, int height, int then, int speed);  /* 0x41a8c0 */
 void sheep_collide(int x, int y, int32_t *s, int act);         /* 0x41b560 */
+void sheep_knocked(Sheep *a, int n);                           /* 0x41c630: n = a->slot */
 void sheep_tick(void);                                         /* 0x41caf0 */
 void sheep_state_unported(Sheep *a);
 void sheep_animate(void);                                      /* 0x41e380 */

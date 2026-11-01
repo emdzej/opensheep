@@ -1,4 +1,5 @@
 #include "objects.h"
+#include "moves.h"
 #include "level.h"
 #include "render.h"
 #include "rng.h"
@@ -259,7 +260,7 @@ int anim_new(int x, int y, int anim, int dir, int type)
     a->dir = dir;
     a->state = 1;
     a->fx = (float)x;
-    a->u74[3] = -1;                      /* +0x88 */
+    a->d[0x22] = -1;                     /* +0x88: not triggered */
     a->rec.scale_x = a->rec.scale_y = 0x100;
     a->rec.shadow = -1;
     a->fy = (float)y;
@@ -455,20 +456,6 @@ void objects_load(const char *pos_path)
 
 /* ------------------------------------------------------------------ update and draw */
 
-typedef void (*MoveFn)(AnimObj *);
-
-static void run_move(AnimObj *a)
-{
-    /* Standard routines: table 0x44c57c; level-specific: descriptor +0x4c. TODO: port them. */
-    static uint8_t warned[0x10000 / 8];
-    uint32_t m = (uint32_t)a->move & 0xffff;
-    if (!a->move) return;
-    if (!(warned[m >> 3] >> (m & 7) & 1)) {
-        warned[m >> 3] |= (uint8_t)(1 << (m & 7));
-        fprintf(stderr, "move routine %s %u not ported\n", m & 0x8000 ? "specific" : "standard", m & 0x7fff);
-    }
-}
-
 void objects_update(void)
 {
     /* 0x402700: slots 32..g_anim_hi (inclusive, as the original) */
@@ -494,7 +481,7 @@ void objects_update(void)
                 a->countdown += a->pause;
             }
         }
-        run_move(a);
+        move_run(a);
     }
 }
 

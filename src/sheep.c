@@ -1013,7 +1013,7 @@ static void sheep_jump(Sheep *a, int n)
     }
 }
 
-static void sheep_knocked(Sheep *a, int n)
+void sheep_knocked(Sheep *a, int n)
 {
     /* 0x41c630 */
     AnimObj *o = &g_anim[n];

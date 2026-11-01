@@ -1,6 +1,7 @@
 #include "play.h"
 #include "level.h"
 #include "levels.h"
+#include "moves.h"
 #include "paths.h"
 #include "player.h"
 #include "render.h"
@@ -8,12 +9,17 @@
 #include "sheep.h"
 #include "sprites.h"
 #include "world.h"
+#include "xp.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 int g_difficulty;
 int8_t g_flock_size[4];
 AnimObj *g_cam_target;
+int g_clock, g_time_limit;          /* 0x4b0f20, 0x4a2090 */
+int g_paused;                       /* 0x4b0f3c */
+static int tim_hard, tim_normal, tim_easy;   /* 0x4a1eac, 0x4a28c8, 0x4a20b0 */
 int g_flock_n, g_flock_sx, g_flock_sy;
 static float cam_tx, cam_ty;        /* 0x4a3ea0, 0x4a4210 */
 static float cam_vx, cam_vy;        /* 0x4ae054, 0x4a40f8 */
@@ -47,7 +53,8 @@ bool level_load_resources(void)
     memset(g_attract, 0, sizeof g_attract);
     g_nattract = 0;
     specials_load();
-    /* TODO: the gates (descriptor +0x54, 0x403130), the texts (0x401620) */
+    gates_init();
+    /* TODO: the texts (0x401620) */
     game_init_deflect();
     g_loading = 0;
     return true;
@@ -60,10 +67,26 @@ static float b_float(int i, int k)
     return (float)v;
 }
 
+static void level_load_tim(void)
+{
+    /* 0x406c00: the time limit in ticks (+8 of the .TIM file; 7200 without one) */
+    tim_hard = 0x1c20;
+    size_t n;
+    uint8_t *f = file_load(world_level_path(".tim"), &n);
+    if (f) {
+        if (n >= 12) memcpy(&tim_hard, f + 8, 4);
+        free(f);
+    }
+    tim_normal = tim_hard * 2;
+    tim_easy = tim_normal + 18000;
+}
+
 void level_start(void)
 {
     static const int needed[3] = { 5, 10, 0x14 };
     g_needed = needed[g_difficulty < 0 ? 0 : g_difficulty > 2 ? 2 : g_difficulty];
+    level_load_tim();
+    g_time_limit = g_difficulty == 0 ? tim_easy : g_difficulty == 1 ? tim_normal : tim_hard;
     if (g_world == 9) g_needed = 1;
     if (g_demo) g_rng_index = 0;
     g_nsheep = g_flock_size[g_breed & 3];
@@ -96,6 +119,8 @@ void level_start(void)
     player_init(&g_player);
     memset(g_chain, 0, sizeof g_chain);
     g_score = 0;
+    g_clock = 0;
+    g_timer_on = 1;
     g_player.x = b_float(0, 0);
     g_player.y = b_float(0, 1);
     g_scroll_reset = 1;
@@ -172,6 +197,14 @@ void play_tick(void)
     camera_update(&g_player);
     /* TODO: the level's tick hook (descriptor +0x10) */
     objects_update();
+    /* the rest of 0x40b9b0's tick */
+    if (g_score_flash) g_score_flash--;
+    if (!g_paused && g_timer_on) g_clock++;
+    if (g_clock == g_time_limit && g_world != 9 && !g_level_over) {
+        int s = anim_new(0, 0, 0x10, -1, 4);
+        g_anim[s].move = 0x11;
+        g_anim[s].d[0x15] = 2;
+    }
 }
 
 void play_draw(Framebuffer *fb)
