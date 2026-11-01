@@ -13,6 +13,11 @@ extern int g_player_moved;              /* 0x4a40c5 */
 extern int g_score;                     /* 0x4a2068 */
 extern int32_t *g_chain[32][2];         /* 0x4bbbf8 */
 extern int (*g_demo_abort)(void);
+/* 0x40fb40: a recording (.rec: four run counts, then the four streams of {u16 value, s16 ticks})
+   into the demo streams; false (and the streams as they were) if it can't be read. */
+bool demo_load(const char *path);
+/* 0x406cc0's end: the streams set up for recording (g_demo 1) or playback (2). */
+void demo_start(void);
 
 void player_init(Player *p);                                   /* 0x418010 */
 void player_tick(Player *p);                                   /* 0x415f10 */

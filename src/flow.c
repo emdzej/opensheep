@@ -497,8 +497,11 @@ static void splash_frame(Framebuffer *fb)
     }
 }
 
+static int demo_abort(void) { return flow_any_key(); }
+
 void flow_start(int state)
 {
+    g_demo_abort = demo_abort;          /* 0x415260 calls 0x422930 */
     g_app_state = state;
     g_app_sub = 0;
     g_world = g_level = 0;

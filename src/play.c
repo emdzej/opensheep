@@ -140,7 +140,7 @@ void level_start(void)
     g_scroll_reset = 1;
     g_cam_target = NULL;
     level_hook(DESC_INIT);             /* 0x406cc0 calls it in mode 1, a level's first start */
-    /* TODO: the demo streams */
+    demo_start();
 }
 
 /* 0x40cb40: ease toward the target 0.2 px/tick per tick of difference / 16 */

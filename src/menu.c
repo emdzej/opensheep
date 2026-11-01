@@ -428,7 +428,7 @@ static void attract_step(void)
         g_next_level = exe_s32(0x451a9c + 8 * (uint32_t)demo_i);
         g_theme = (int8_t)g_next_world;
         world_select(g_next_world, g_next_level);
-        /* TODO: the demo's input stream (0x40fb40 on the level's .rec) */
+        demo_load(world_level_path(exe_str(0x44a0b8)));
         g_app_sub = 0;
         g_prog.breeds = g_prog.levels = 0;
         g_prog.bonus = 0;

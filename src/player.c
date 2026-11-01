@@ -12,8 +12,10 @@
 #include "sound.h"
 #include "sprites.h"
 #include "world.h"
+#include "xp.h"
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 int g_in_raw_x, g_in_raw_y;             /* 0x4b9820, 0x4b9824 */
@@ -254,6 +256,61 @@ static bool demo_play(int k, int32_t *out)
         g_demo_left[k] = s[g_demo_pos[k]].n;
     }
     return false;
+}
+
+bool demo_load(const char *path)
+{
+    size_t n;
+    uint8_t *f = file_load(path, &n);
+    if (!f) {
+        fprintf(stderr, "Cannot Load Demo recording %s\n", path);   /* 0x44c460 */
+        return false;
+    }
+    int len[4];
+    size_t need = 16;
+    bool ok = n >= 16;
+    for (int k = 0; k < 4 && ok; k++) {
+        len[k] = (int)(f[4 * k] | f[4 * k + 1] << 8 | f[4 * k + 2] << 16 | (uint32_t)f[4 * k + 3] << 24);
+        /* the original sizes its buffers from the counts; these are fixed */
+        ok = len[k] >= 0 && len[k] <= DEMO_MAX;
+        need += 4 * (size_t)(ok ? len[k] : 0);
+    }
+    if (!ok || need > n) {
+        fprintf(stderr, "Cannot Load Demo recording %s\n", path);
+        free(f);
+        return false;
+    }
+    const uint8_t *p = f + 16;
+    for (int k = 0; k < 4; k++) {
+        g_demo_len[k] = len[k];
+        memset(g_demo_stream[k], 0, sizeof demo_buf[k]);
+        for (int i = 0; i < len[k]; i++, p += 4) {
+            g_demo_stream[k][i].v = (uint16_t)(p[0] | p[1] << 8);
+            g_demo_stream[k][i].n = (int16_t)(p[2] | p[3] << 8);
+        }
+        g_demo_pos[k] = 0;
+    }
+    free(f);
+    return true;
+}
+
+void demo_start(void)
+{
+    if (g_demo == 1) {
+        /* run 0 is a marker; the recording starts on run 0's count */
+        for (int k = 0; k < 4; k++) {
+            g_demo_pos[k] = 0;
+            g_demo_stream[k][0].v = 0x800;
+            g_demo_left[k] = 1;
+            g_demo_len[k] = 0;
+        }
+    }
+    if (g_demo == 2) {
+        for (int k = 0; k < 4; k++) {
+            g_demo_pos[k] = 1;
+            g_demo_left[k] = g_demo_stream[k][1].n;
+        }
+    }
 }
 
 static void player_demo(Player *p)
