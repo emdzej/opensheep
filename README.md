@@ -24,6 +24,9 @@ gasm-run opensheep.wasm --asset cd=Sheep.iso          # an image
 gasm-run opensheep.wasm --asset-dir /Volumes/SHEEP    # the disc or a folder copy
 ```
 
+Or play in the browser at [opensheep.emdzej.pl/play](https://opensheep.emdzej.pl/play/), with the same
+module and your CD folder or image.
+
 `tools/fetch-gasm-runner.sh <platform>` downloads the released `gasm-run` into `.deps/` and prints its
 folder (platforms: `macos-universal`, `linux-x86_64`, `linux-arm64`, `windows-x86_64`).
 
@@ -31,7 +34,7 @@ Launch parameters (`--param name=value`; in the browser, URL query parameters):
 
 | Parameter | What |
 |---|---|
-| `level=<world>.<level>` | straight into a level, e.g. `level=3.2` |
+| `level=<world>.<level>` | the bare level, e.g. `level=3.2`: play and drawing only (no menus; the tests' harness) |
 | `ini=<lines>` | a `Sheep.ini`, lines separated by `;` (the retail disc has none) |
 | `view=1` | the level viewer |
 | `trace=1` | log the app states |
@@ -83,7 +86,8 @@ developers' debug keys. Languages past the seventh need fonts the disc doesn't h
   that includes `gasm.h`). Every ported function cites its address in `sheep_game.exe`.
 - `tests/` — headless tests against the real data; `tests/hashes.txt` the regression hashes.
 - `tools/` — format decoders and development aids (Python, and `bik` / `overview` in C).
-- `docs/` — reverse-engineering notes: `architecture.md`, `formats.md`.
+- `docs/` — the site (VitePress, [opensheep.emdzej.pl](https://opensheep.emdzej.pl)): the user guide, the
+  browser player (`docs/public/play/`) and the reverse-engineering notes, `architecture.md` and `formats.md`.
 
 ## License
 

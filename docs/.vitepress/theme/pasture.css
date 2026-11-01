@@ -1,0 +1,103 @@
+/* Pasture theme, sampled from the game's own level 1.1: the grass (#185108, #084500), the hedges
+   (#185518), the sandy track (#b89838), the HUD's gold (#ffdb00) and the horsebox red (#520400). */
+
+:root {
+  --sheep-grass: #185108;
+  --sheep-grass-dark: #084500;
+  --sheep-hedge: #185518;
+  --sheep-sand: #b89838;
+  --sheep-gold: #ffdb00;
+  --sheep-red: #520400;
+  --sheep-wool: #f7f4ea;
+
+  --vp-c-brand-1: #1e5f0c;
+  --vp-c-brand-2: #185108;
+  --vp-c-brand-3: #185108;
+  --vp-c-brand-soft: rgba(24, 81, 8, 0.12);
+
+  --vp-c-bg: var(--sheep-wool);
+  --vp-c-bg-alt: #eee8d6;
+  --vp-c-bg-elv: #fbf9f2;
+  --vp-c-bg-soft: #ebe4cd;
+  --vp-c-divider: #d8cca4;
+  --vp-c-gutter: #d8cca4;
+
+  --vp-c-tip-1: var(--vp-c-brand-1);
+  --vp-c-tip-2: var(--vp-c-brand-2);
+  --vp-c-tip-soft: var(--vp-c-brand-soft);
+  --vp-c-warning-1: #7a5a10;
+  --vp-c-warning-soft: rgba(184, 152, 56, 0.18);
+  --vp-c-danger-1: #8a1a10;
+  --vp-c-danger-soft: rgba(82, 4, 0, 0.1);
+
+  --vp-button-brand-bg: var(--sheep-grass);
+  --vp-button-brand-hover-bg: #23690f;
+  --vp-button-brand-active-bg: var(--sheep-grass-dark);
+  --vp-button-brand-text: #fbf9f2;
+  --vp-button-alt-bg: #e4d9b4;
+  --vp-button-alt-hover-bg: #d8cb9c;
+  --vp-button-alt-text: #2c2a14;
+
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, var(--sheep-grass) 20%, #3f7d1c 50%, var(--sheep-sand) 85%);
+  --vp-home-hero-image-background-image: linear-gradient(135deg, rgba(24, 81, 8, 0.35), rgba(184, 152, 56, 0.35));
+  --vp-home-hero-image-filter: blur(56px);
+}
+
+.dark {
+  --vp-c-brand-1: #9ccc5a;
+  --vp-c-brand-2: #6fa83a;
+  --vp-c-brand-3: #185108;
+  --vp-c-brand-soft: rgba(111, 168, 58, 0.16);
+
+  --vp-c-bg: #0f1a0b;
+  --vp-c-bg-alt: #0b1408;
+  --vp-c-bg-elv: #162311;
+  --vp-c-bg-soft: #1a2a14;
+  --vp-c-divider: #2c3f22;
+  --vp-c-gutter: #070d05;
+  --vp-c-text-1: #efecdf;
+  --vp-c-text-2: #c3bea4;
+
+  --vp-c-warning-1: #e2c45a;
+  --vp-c-warning-soft: rgba(255, 219, 0, 0.12);
+
+  --vp-button-brand-bg: var(--sheep-grass);
+  --vp-button-brand-hover-bg: #23690f;
+  --vp-button-brand-text: #f7f4ea;
+  --vp-button-alt-bg: #24361c;
+  --vp-button-alt-hover-bg: #2f4524;
+  --vp-button-alt-text: #efecdf;
+}
+
+/* A hedge-and-track stripe under the navigation bar. */
+.VPNav::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 4px;
+  background: repeating-linear-gradient(90deg,
+    var(--sheep-hedge) 0 44px, var(--sheep-grass) 44px 80px,
+    var(--sheep-sand) 80px 96px, var(--sheep-grass-dark) 96px 132px);
+  pointer-events: none;
+}
+
+.VPFeature {
+  border-left: 3px solid var(--sheep-grass);
+}
+
+.vp-doc table th {
+  background: var(--vp-c-bg-soft);
+}
+
+.VPHero .image-src,
+.vp-doc img {
+  image-rendering: pixelated;
+}
+
+/* gasm's official "Built for gasm" badge: the variant that matches the theme. */
+.gasm-badge-dark { display: none; }
+.dark .gasm-badge-light { display: none; }
+.dark .gasm-badge-dark { display: inline; }

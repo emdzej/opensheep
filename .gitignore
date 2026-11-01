@@ -8,3 +8,8 @@ __pycache__/
 *.iso
 *.exe
 sheep_game.exe
+docs/node_modules/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+docs/public/play/vendor/
+docs/public/play/opensheep.wasm

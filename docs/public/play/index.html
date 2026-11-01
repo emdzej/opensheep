@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Play | OpenSheep</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Play Sheep in your browser with OpenSheep, using the data from your own CD.">
+<meta name="theme-color" content="#185108">
+<link rel="stylesheet" href="play.css">
+<script type="importmap">
+{ "imports": {
+  "@emdzej/csfs-core": "./vendor/csfs/core/index.js",
+  "@emdzej/csfs-fsa": "./vendor/csfs/fsa/index.js",
+  "@emdzej/csfs-opfs": "./vendor/csfs/opfs/index.js"
+} }
+</script>
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="/">OpenSheep</a>
+  <nav>
+    <a href="/guide/">User guide</a>
+    <a href="/guide/controls">Controls</a>
+    <a href="/play/" aria-current="page">Play</a>
+    <a href="https://github.com/emdzej/opensheep">GitHub</a>
+  </nav>
+</header>
+
+<main>
+  <section id="setup">
+    <h1>Play Sheep in your browser</h1>
+    <p class="lead">OpenSheep runs here as <code>opensheep.wasm</code> on the
+      <a href="https://gasm.emdzej.pl">gasm</a> runtime: the same engine as on the desktop, with the
+      graphics, levels, movies and music read from <strong>your own Sheep CD</strong>. Nothing from the game
+      is on this site, and nothing you pick leaves your computer.</p>
+
+    <div class="cols">
+      <div class="card">
+        <h2>What you need</h2>
+        <ul>
+          <li>The <strong>Sheep CD for Windows</strong> (Mind's Eye / Empire, 2000), as a disc in a drive, a
+            mounted disc image, or a folder you copied it to.</li>
+          <li>A recent Chrome, Edge, Firefox or Safari. The browser can copy the game's files (about 490 MB)
+            into its private storage for this site once, so later visits start at once.</li>
+          <li>A mouse, the keyboard or a gamepad.</li>
+        </ul>
+      </div>
+      <div class="card" id="choose">
+        <h2 id="choose-title">Your CD</h2>
+        <div id="imported" hidden>
+          <p><strong>Imported:</strong> <span id="imported-desc"></span></p>
+          <div class="row">
+            <button id="play-opfs" class="primary">Play</button>
+            <button id="remove">Remove imported data</button>
+          </div>
+          <p class="small" id="storage"></p>
+          <p class="small" id="persist-row" hidden>The browser may clear site data when disk space runs low.
+            <button id="persist" class="link">Keep it</button></p>
+          <p class="small">Or choose the CD again below to replace it.</p>
+        </div>
+        <div class="row">
+          <button id="pick-folder" class="primary">Choose your Sheep CD folder</button>
+          <button id="pick-image" class="link">or a disc image (.iso, .bin)</button>
+        </div>
+        <p class="small">Pick the folder that holds <code>Sheep.exe</code>, <code>main.xp</code> and
+          <code>Data</code>: the CD itself (<code>/Volumes/SHEEP</code>, drive <code>D:</code>) or a copy of it.</p>
+        <input id="folder-input" type="file" webkitdirectory multiple hidden>
+        <input id="image-input" type="file" accept=".iso,.bin,.img,.cue" hidden>
+
+        <div id="check" hidden>
+          <ul id="check-list" class="checks"></ul>
+          <div class="row" id="check-actions">
+            <button id="import" class="primary">Import and play</button>
+            <button id="play-direct">Play without importing</button>
+          </div>
+          <p class="small">Importing copies the files into this site's private browser storage (OPFS).
+            Playing without importing reads them from what you picked, which you'll need to pick again
+            next time.</p>
+        </div>
+
+        <div id="progress" hidden>
+          <progress id="progress-bar" max="1" value="0"></progress>
+          <p class="small" id="progress-text"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="game" hidden>
+    <div id="stage" class="stage">
+      <canvas id="screen" width="640" height="480" aria-label="Sheep"></canvas>
+    </div>
+    <div class="toolbar">
+      <button id="fullscreen">Fullscreen</button>
+      <button id="sound">Sound: on</button>
+      <button id="stop">Stop</button>
+      <span id="view-controls">
+        <select id="filter" aria-label="Scaling" title="How the picture is scaled up: sharp = even pixels at any size, nearest = plain pixel doubling, xbr = smooth edges, fsr = AMD FSR 1, crt = scanlines"></select>
+        <label class="small" title="Scale by whole multiples only (black border around)"><input id="integer" type="checkbox"> integer</label>
+      </span>
+      <span id="status" class="small"></span>
+    </div>
+  </section>
+
+  <p id="message" class="message" role="status" hidden></p>
+
+  <section id="controls">
+    <h2>Controls</h2>
+    <p>The original's defaults. The game's options choose the controller; in a level, M, K and J switch to
+      the mouse, the keyboard and a pad. More in <a href="/guide/controls">Controls</a>.</p>
+    <table>
+      <thead><tr><th>In the game</th><th>Keyboard</th><th>Mouse</th><th>Gamepad</th></tr></thead>
+      <tbody>
+        <tr><td>Move the shepherd</td><td>Arrow keys</td><td>Move the mouse</td><td>D-pad, left stick</td></tr>
+        <tr><td>Run</td><td>Left Shift</td><td>Left button</td><td>Button 1</td></tr>
+        <tr><td>Creep</td><td>Left Alt</td><td>Right button</td><td>Button 2</td></tr>
+        <tr><td>Act</td><td>Space</td><td></td><td>Button 3</td></tr>
+        <tr><td>Pause menu</td><td>Esc</td><td></td><td>Button 4</td></tr>
+      </tbody>
+    </table>
+    <p class="small">With the mouse controller, click the game to capture the mouse; Esc releases it. Holding
+      Esc for a second stops the game. Settings, save slots and best times are kept in this browser.
+      Developer options go in the address: <code>?ini=BYPASS_FRONTEND 1;START_WORLD 2;START_LEVEL 3</code>, <code>?ini=OUR_MENU 1</code>
+      (<a href="/guide/developer">Developer options</a>).</p>
+  </section>
+</main>
+
+<footer class="foot"><p class="powered">Powered by <a href="https://gasm.emdzej.pl"><img src="https://gasm.emdzej.pl/badge/built-for-gasm-dark.svg" alt="Built for gasm" width="120" height="44"></a></p>
+  OpenSheep is released under the GPL-3.0. Sheep is &copy; 2000 Mind's Eye Productions / Empire Interactive.
+  OpenSheep contains no original code or assets.</footer>
+
+<script type="module" src="play.js"></script>
+</body>
+</html>

@@ -35,8 +35,8 @@ guarded, with a comment describing what the original does.
 |---|---|
 | `src/` | The core: app loop (`app.c`, `flow.c` = App_Frame's states), data (`vfs.c` + ISO 9660, `xp.c` archives, `rnc.c`), `exe.c`, sprites and surfaces, fonts, levels (`level.c`, `objects.c`, `play.c`, `lv1.c`..`lv9.c` per world), flock (`sheep.c`), shepherd (`player.c`, demos), moves, HUD, menus (`menu.c`, `pause.c`), results, high scores, saves, credits, cheats/debug keys, sound mixer, Bink (`bink.c`, `movie.c`), input. Backend: `platform_gasm.c` (the only file that includes `gasm.h`). Test host pieces: `vfs_host.c`, `storage_file.c`, `input_none.c` |
 | `tests/` | `play_test.c`, `xp_test.c` (headless, against the real data), `hashes.txt` (`tools/regress.sh`) |
-| `tools/` | `fn.sh <addr>` (a function from `re/all.c`), `dis.py` (disassembler), format decoders (`xp.py`, `spr.py`, `blo.py`, `rnc.py`), `bik.c` and `overview.c` (native), `regress.sh`, `fetch-gasm-sdk.sh` / `fetch-gasm-runner.sh`, `ghidra/` scripts |
-| `docs/` | `architecture.md`, `formats.md` |
+| `tools/` | `fn.sh <addr>` (a function from `re/all.c`), `dis.py` (disassembler), format decoders (`xp.py`, `spr.py`, `blo.py`, `rnc.py`), `bik.c` and `overview.c` (native), `regress.sh`, `web-play-test.mjs` (the browser player in headless Chrome against gasm-run's hashes), `fetch-gasm-sdk.sh` / `fetch-gasm-runner.sh`, `ghidra/` scripts |
+| `docs/` | The VitePress site: `guide/`, the browser player `public/play/` (`play.js`, `cd.js`; the gasm runtime vendored by `scripts/vendor-web.sh`), `architecture.md`, `formats.md` |
 
 ## Build and test
 
@@ -81,10 +81,21 @@ runner window in unattended runs.
 
 - The original's main loop plays a movie instead of App_Frame while one is set (`movie.c`); the frame
   that starts one skips its present.
+- `level=W.L` is the bare harness (`app.c`: play_tick and drawing): no pause menu or results. Use
+  `ini=BYPASS_FRONTEND 1;START_WORLD W;START_LEVEL L` (then a key on the loading screen) for the real path.
 - `level_load_resources` then `level_start` is 0x406cc0 mode 1; `level_regroup` is mode 2 (no reload).
 - The pause menu's page routines switch on the item last *picked* (0x4b9104), not the cursor.
 - Settings load only on the front-end path; a `level=` start keeps the defaults, which the regression
   hashes depend on.
+- A run that finds a saved `HiScore.tab` plays another random stream (the defaults draw 60 `rand`s,
+  0x40ef50); compare hashes with empty storage.
 - `/usr/bin/cc` for one-off native compiles (`cc` may be aliased).
 - Run Python helpers with `-P` from the repo root: a stray `dis.py` in the working directory shadows the
   standard library's.
+
+## The site
+
+```sh
+docs/scripts/copy-wasm.sh && cd docs && pnpm install && scripts/vendor-web.sh && pnpm build && cd ..
+node tools/web-play-test.mjs cd ~/Downloads/Sheep.iso      # headless Chrome: import, OPFS, folder, image
+```
