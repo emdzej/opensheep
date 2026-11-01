@@ -1329,7 +1329,8 @@ void move_run(AnimObj *a)
             return;
         }
         uint32_t va = exe_u32(t + 4 * m);
-        MoveFn f = va == 0x4039f0 ? move_nop : level_move(va);
+        MoveFn f = level_move(va);
+        if (!f) f = standard_fn(va);    /* some levels list standard routines (4.x: 0x413fa0) */
         if (f) f(a);
         else unported((int)(m | 0x8000), va);
     }
