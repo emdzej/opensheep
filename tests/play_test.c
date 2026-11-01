@@ -1,4 +1,4 @@
-/* Level 1.1 in play, headless: the flock stays put with no input (no trigger fires on its own), a
+/* Level 1.1 in play, headless: the sheep stay put with no input (no trigger fires on its own), a
    sheep put on the horsebox ramp is penned, and the level clock ends the level. */
 #include "hud.h"
 #include "exe.h"
@@ -32,11 +32,13 @@ int main(void)
     if (!exe_load()) { fprintf(stderr, "%s\n", exe_error()); return 1; }
 
     start();
-    CHECK(g_nsheep == 10, "flock %d", g_nsheep);
+    /* the flock of 10 at the bottom, and the 7 the level's markers stand for (0x4016a0) at the top
+       and the middle */
+    CHECK(g_nsheep == 17, "flock %d", g_nsheep);
     for (int t = 0; t < 120; t++) play_tick();
     for (int i = 0; i < g_nsheep; i++)
-        CHECK(g_sheep[i].state == 0 && g_sheep[i].iy > 1500, "sheep %d state %d at %d,%d", i, g_sheep[i].state,
-              g_sheep[i].ix, g_sheep[i].iy);
+        CHECK(g_sheep[i].state == 0 && (i < 10) == (g_sheep[i].iy > 1500), "sheep %d state %d at %d,%d", i,
+              g_sheep[i].state, g_sheep[i].ix, g_sheep[i].iy);
 
     /* the ramp's special cells: x 1088..1119, y 2040..2087 */
     g_sheep[0].x = 1100.0f;

@@ -26,6 +26,9 @@ int g_paused;                       /* 0x4b0f3c */
 int8_t g_frozen;                    /* 0x4b0f24: the cheat that stops the actors */
 int g_tim_hard, g_tim_normal, g_tim_easy;   /* 0x4a1eac, 0x4a28c8, 0x4a20b0 */
 int g_flock_n, g_flock_sx, g_flock_sy;
+/* 0x4016a0's sheep: level objects (move 7, parameter 1 0xb) that become sheep after the flock */
+static struct { int x, y; } extra[MAX_SHEEP];
+static int nextra;
 static float cam_tx, cam_ty;        /* 0x4a3ea0, 0x4a4210 */
 static float cam_vx, cam_vy;        /* 0x4ae054, 0x4a40f8 */
 static int actor_phase;             /* 0x4ae088 */
@@ -64,6 +67,19 @@ bool level_load_resources(void)
     hint_text_load();
     game_init_deflect();
     g_loading = 0;
+    /* the end of Level_LoadBLO: 0x4016a0 turns the objects into sheep after the flock (0x406cc0 set
+       g_nsheep to its size before the load; level_start adds them), then 0x4056f0 */
+    nextra = 0;
+    int n = g_flock_size[g_breed & 3];
+    for (int i = 0x20; i <= g_anim_hi && i < MAX_ANIM; i++) {   /* to g_anim_hi inclusive, as the original */
+        AnimObj *a = &g_anim[i];
+        if (a->type == -1 || a->move != 7 || a->param[1] != 0xb || n + nextra >= MAX_SHEEP) continue;
+        extra[nextra].x = a->x;
+        extra[nextra].y = a->y;
+        nextra++;
+        anim_kill(a);
+    }
+    input_keys_tick();
     return true;
 }
 
@@ -96,13 +112,21 @@ void level_start(void)
     g_time_limit = g_difficulty == 0 ? g_tim_easy : g_difficulty == 1 ? g_tim_normal : g_tim_hard;
     if (g_world == 9) g_needed = 1;
     if (g_demo) g_rng_index = 0;
-    g_nsheep = g_flock_size[g_breed & 3];
+    int flock = g_nsheep = g_flock_size[g_breed & 3];
     memset(g_sheep, 0, sizeof g_sheep);
     for (int i = g_nsheep; i < MAX_SHEEP; i++) g_sheep[i].alive = 2;
+    for (int k = 0; k < nextra && g_nsheep < MAX_SHEEP; k++) {
+        Sheep *s = &g_sheep[g_nsheep++];
+        s->state = 0;
+        s->d[0x1d] |= 1;
+        s->x = (float)extra[k].x;
+        s->y = (float)extra[k].y;
+    }
     anim_init(3, PLAYER_SLOT, 0, 0);
     for (int i = 0; i < g_nsheep; i++) {
         Sheep *s = &g_sheep[i];
-        if (i + 1 < g_lv.nobjects) {
+        s->alive = 0;
+        if (i < flock && i + 1 < g_lv.nobjects) {
             s->x = b_float(i + 1, 0);
             s->y = b_float(i + 1, 1);
         }

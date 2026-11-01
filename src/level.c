@@ -141,7 +141,7 @@ bool level_load_blo(const char *path)
     g_lv.map_backup = malloc(cells * 2);
     if (g_lv.map_backup) memcpy(g_lv.map_backup, g_lv.map, cells * 2);
     init_tile_anims();
-    /* TODO: 0x401950, 0x4016a0, 0x4056f0 (level objects, positions) */
+    /* the rest of the load, 0x401950, 0x4016a0 and 0x4056f0: level_load_resources (play.c) */
     return true;
 }
 
