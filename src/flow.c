@@ -507,6 +507,24 @@ void flow_start(int state)
     g_world = g_level = 0;
 }
 
+static void debug_texts(void)
+{
+    /* the end of App_Frame (0x44b190's drawing, 0x405880, is never on): with RECORD the demo's state;
+       with OUR_MENU, V held the version, C held the world, level and shepherd's tile */
+    uint16_t buf[0x100], fmt[0x40];
+    static const uint32_t demo_text[] = { 0, 0x44b8f4, 0x44b8cc, 0x44b8b8, 0x44b8a0 };
+    if (g_demo > 0 && g_demo <= 4 && g_record) font_draw(0, 0, exe_wtext(demo_text[g_demo], fmt, 0x40), 0, 0xffffff);
+    if (!g_our_menu) return;
+    if (g_keyheld[DIK_V]) font_draw(10, 0x14, exe_wtext(0x44b880, fmt, 0x40), 0, 0xffffff);
+    if (g_keyheld[DIK_C]) {
+        wfmt(buf, 0x100, exe_wtext(0x44b858, fmt, 0x40), (int)g_theme, g_level);
+        font_draw(400, 0x3a, buf, 0, 0xffffff);
+        int y = ftol((double)g_player.y), x = ftol((double)g_player.x);
+        wfmt(buf, 0x100, exe_wtext(0x44b834, fmt, 0x40), x - x % 32, y - y % 24);
+        font_draw(400, 0x50, buf, 0, 0xffffff);
+    }
+}
+
 bool flow_frame(Framebuffer *fb)
 {
     /* App_Frame 0x40a170 */
@@ -610,5 +628,6 @@ bool flow_frame(Framebuffer *fb)
         go(APP_MENU, 0, 0);
         break;
     }
+    debug_texts();
     return !g_quit;
 }
