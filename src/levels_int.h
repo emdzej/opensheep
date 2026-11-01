@@ -97,3 +97,5 @@ MoveFn lv6_move(uint32_t va);
 bool lv7_actor(uint32_t va, int32_t *actor);
 bool lv7_call(uint32_t va);
 MoveFn lv7_move(uint32_t va);
+bool lv9_actor(uint32_t va, int32_t *actor);
+MoveFn lv9_move(uint32_t va);
