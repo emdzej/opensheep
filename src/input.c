@@ -3,7 +3,9 @@
 #include "exe.h"
 #include "game.h"
 #include "keys.h"
+#include "platform.h"
 #include "player.h"
+#include <math.h>
 
 uint8_t g_keydown[256];
 int8_t g_keyheld[256];
@@ -58,7 +60,8 @@ static int8_t held(uint32_t cfg) { return g_keyheld[exe_u32(cfg) & 0xff]; }
 
 void input_map(void)
 {
-    /* the pad's button 3 also acts (TODO: the pads, 0x422760; the mouse, 0x405640) */
+    /* 0x408ca0: the pad read with a pad chosen (the mouse, 0x405640, TODO); its button 3 also acts */
+    if (g_input_mode == 2 || g_input_mode == 3) pad_read();
     if (!(g_pad_buttons & 4)) pad_held = 0;
     else if (pad_held < 60) pad_held++;
     g_key_creep = held(KEY_CREEP) != 0;
@@ -102,5 +105,14 @@ void input_pad_keys(void)
 
 void pad_read(void)
 {
-    /* 0x422760 reads the DirectInput joystick: the stick's x / y and buttons 1-4 as bits 0-3 */
+    /* 0x422760: the DirectInput joystick's state, x / y in the range set at its set-up (0x4399xx:
+       DIPROPRANGE -1000..1000 on both axes, no dead zone) and buttons 1-4 as bits 0-3 */
+    float x = 0.0f, y = 0.0f;
+    uint32_t b = 0;
+    if (!plat_joystick(&x, &y, &b)) x = y = 0.0f, b = 0;
+    x = x < -1.0f ? -1.0f : x > 1.0f ? 1.0f : x;
+    y = y < -1.0f ? -1.0f : y > 1.0f ? 1.0f : y;
+    g_pad_x = (int)lrintf(x * 1000.0f);
+    g_pad_y = (int)lrintf(y * 1000.0f);
+    g_pad_buttons = (int8_t)(b & 15);
 }

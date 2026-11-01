@@ -21,7 +21,7 @@ void input_read(int (*is_down)(int key));
 void input_keys_tick(void);
 /* 0x408ca0 (keyboard part): the shepherd's controls from the configured keys (0x44ad4c..). */
 void input_map(void);
-/* 0x422760: the pad (g_pad_x / g_pad_y, g_pad_buttons). TODO: pads; for now they keep their values. */
+/* 0x422760: the pad (g_pad_x / g_pad_y -1000..1000, g_pad_buttons), from plat_joystick. */
 void pad_read(void);
 /* 0x410330: the pad's stick and buttons as presses of the arrow keys and space (the bonus races). */
 void input_pad_keys(void);

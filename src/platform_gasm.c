@@ -188,6 +188,29 @@ bool plat_mouse(int *x, int *y, int *dx, int *dy, uint32_t *buttons)
 }
 
 uint32_t plat_pad(int player) { return player >= 0 && player < 4 ? pads[player] : 0; }
+
+bool plat_joystick(float *x, float *y, uint32_t *buttons)
+{
+    uint8_t b[GASM_GAMEPAD_BYTES];
+    for (uint32_t slot = 0; slot < 4; slot++) {
+        if (gasm_gamepad(slot, b, sizeof b) != GASM_GAMEPAD_BYTES) return false;
+        uint32_t flags, nb, na;
+        memcpy(&flags, b, 4);
+        memcpy(&nb, b + 4, 4);
+        memcpy(&na, b + 8, 4);
+        if (!(flags & GASM_GAMEPAD_CONNECTED)) continue;
+        float v[48];
+        memcpy(v, b + 12, sizeof v);
+        *buttons = 0;
+        for (uint32_t i = 0; i < 4 && i < nb; i++)
+            if (v[i] > 0.5f) *buttons |= 1u << i;
+        *x = na > 0 ? v[32] : 0.0f;
+        *y = na > 1 ? v[33] : 0.0f;
+        return true;
+    }
+    return false;
+}
+
 uint64_t plat_ticks_ms(void) { return virt_ms; }
 
 /* ------------------------------------------------------------------ storage */

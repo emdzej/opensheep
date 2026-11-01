@@ -1,7 +1,7 @@
 /* Platform contract: everything the portable game core needs from the host. The core (every file in
    src/ except the backends) includes no platform headers; a backend implements the functions below and
    drives the app (app.h). Backend: platform_gasm.c (gasm). The tests supply their own pieces
-   (vfs_host.c, storage_file.c).
+   (vfs_host.c, storage_file.c, joystick_none.c).
 
    A backend's job, in order:
    1. Mount the game data (vfs.h): a directory, a disc image, or a VfsSource over host-provided bytes.
@@ -53,6 +53,10 @@ enum {
     PAD_RIGHT = 1 << 11,
 };
 uint32_t plat_pad(int player);
+/* A joystick, as the original's DirectInput device: the first connected gamepad's left stick (x, y in
+   [-1, 1], y > 0 down) and its first four buttons (bit 0 south, 1 east, 2 west, 3 north). Real
+   devices only, not the keyboard's pad bindings. false: none connected. */
+bool plat_joystick(float *x, float *y, uint32_t *buttons);
 
 /* ---- time ---- */
 /* Milliseconds since start: a virtual clock, 16 ms per present (the original's tick). */
