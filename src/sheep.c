@@ -1069,7 +1069,7 @@ void sheep_knocked(Sheep *a, int n)
     }
 }
 
-static void sheep_pathed(Sheep *a, int n)
+void sheep_pathed(Sheep *a, int n)
 {
     /* 0x41c880: state 8, walked to a path's start, then along it */
     AnimObj *o = &g_anim[n];
