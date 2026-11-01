@@ -19,10 +19,15 @@ extern int g_carry_time;                /* 0x4b9714: set by Move_06 (no reader f
 extern AnimObj *g_carry_obj;            /* 0x4b9718 */
 
 /* Standard routines the level-specific ones call. */
+void move_02(AnimObj *a);               /* 0x411ef0 */
 void move_03(AnimObj *a);               /* 0x411fe0 */
 void move_05(AnimObj *a);               /* 0x412270 */
 void move_10(AnimObj *a);               /* 0x413130 */
+void move_15(AnimObj *a);               /* 0x413a50 */
 void move_19(AnimObj *a);               /* 0x413e60 */
+void move_20(AnimObj *a);               /* 0x413fa0 */
+/* 0x406650 with the voice list 0x4b9984: stop an object's looping sound (d27 / d42). */
+void anim_stop_sound(AnimObj *a);
 /* 0x402700's dispatch: a->move n runs standard routine n, n | 0x8000 the level's routine n. */
 void move_run(AnimObj *a);
 /* 0x403130: gate g (descriptor +0x54) closed (open = 0) or open: copy its map cells into place. */

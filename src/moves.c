@@ -166,7 +166,7 @@ static void move_01(AnimObj *a)
     }
 }
 
-static void move_02(AnimObj *a)
+void move_02(AnimObj *a)
 {
     /* 0x411ef0: a gate opening once; d15 anim, d16 gate, d17 path (-1: animation only), d18 1: drawn
        behind once open, d19 restore the anim at the path's end */
@@ -504,7 +504,7 @@ static void move_14(AnimObj *a)
     d[0x22] = -1;
 }
 
-static void move_15(AnimObj *a)
+void move_15(AnimObj *a)
 {
     /* 0x413a50: keeps its offset from object d15 */
     AnimObj *o = obj_by_id(a->d[0x15]);
@@ -568,7 +568,7 @@ void move_19(AnimObj *a)
     d[0x22] = -1;
 }
 
-static void stop_sound(AnimObj *a)
+void anim_stop_sound(AnimObj *a)
 {
     /* 0x406650 and the voice list 0x4b9984 (TODO: the mixer) */
     if (!a->sound) return;
@@ -702,7 +702,7 @@ static void move_08(AnimObj *a)
             sheep_launch_sound(s->d, 0, 1000, 0x14, 0, 0x19);
             a->sub = 0;
         }
-        if (moved == 0 || a->sub == 0) stop_sound(a);
+        if (moved == 0 || a->sub == 0) anim_stop_sound(a);
     }
     int f = d[0x1d] / 8;
     set_frame(a, f);
@@ -976,7 +976,7 @@ static double vlen(double x, double y)
 
 static double vdot(const double u[2], const double v[2]) { return u[0] * v[0] + u[1] * v[1]; }
 
-static void move_20(AnimObj *a)
+void move_20(AnimObj *a)
 {
     /* 0x413fa0: keeps level with the shepherd along the line through path d16's first two points,
        within them by x; otherwise Move_19 */
@@ -1107,7 +1107,7 @@ static void move_25(AnimObj *a)
     int32_t *d = a->d;
     if (a->sub == 0) {
         if (a->anim != d[0x16]) anim_set(a->slot, d[0x16], -1);
-        stop_sound(a);
+        anim_stop_sound(a);
         if (d[0x22] != -1) {
             hint_show(d[0x15]);
             g_hint_y = 100;
