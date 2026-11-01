@@ -134,6 +134,56 @@ static const uint8_t *skip_row(const uint8_t *p)
     }
 }
 
+/* 0x4197b0: a frame's shadow. Every other row of the top h / 2 x 2 rows darkens the target, each row
+   one pixel further right, from (x - h / 2, y + h / 2): translucent pixels by a quarter, opaque ones
+   by half; when clipped, all of them by half. */
+static void draw_sheared(int x, int y, int bank, uint32_t frame)
+{
+    SprFrame f;
+    if (!sprite_frame(bank, (int)(frame & 0x3fffffff), &f)) return;
+    int half = (int)((uint32_t)f.h >> 1), ext = f.w + half;
+    x -= half;
+    y += half;
+    if (!(x < clip_x1 && clip_x0 <= x + ext && y < clip_y1 && clip_y0 <= y + half)) return;
+    bool clipped = x < clip_x0 || clip_x1 <= x + ext || y < clip_y0 || clip_y1 <= y + half;
+    bool mirror = frame & SPR_MIRROR;
+    int dir = mirror ? -1 : 1;
+    const uint8_t *p = f.rows;
+    int rows = half;
+    if (clipped) {
+        if (y < clip_y0) {
+            int skip = clip_y0 - y;
+            x += skip;
+            if ((rows -= skip) <= 0) return;
+            for (skip *= 2; skip; skip--) p = skip_row(p);
+            y = clip_y0;
+        }
+        if (y + rows - clip_y1 >= 0) rows -= y + rows - clip_y1;
+    }
+    for (; rows > 0; rows--, y++, x++) {
+        uint16_t *row = target->pixels + (ptrdiff_t)y * target->pitch;
+        int px = mirror ? x + f.w - 1 : x;
+        for (;;) {
+            uint8_t b = *p++;
+            if (!b) break;
+            if (b & 0x80) { px += dir * (256 - b); continue; }
+            bool alpha = b < 0x40;
+            int n = alpha ? b : b - 0x3f;
+            for (int i = 0; i < n; i++, p += alpha ? 3 : 2, px += dir) {
+                uint16_t *q = &row[px];
+                if (clipped) {
+                    if (clip_x0 <= px && px < clip_x1) *q = (uint16_t)((*q & 0xf7de) >> 1);
+                } else if (alpha) {
+                    *q = (uint16_t)(*q - ((*q & 0xe79c) >> 2));
+                } else {
+                    *q = (uint16_t)((*q & 0xf7de) >> 1);
+                }
+            }
+        }
+        p = skip_row(p);
+    }
+}
+
 void sprite_draw(int x, int y, int bank, uint32_t frame, int sx, int sy)
 {
     if (!target) return;
@@ -145,8 +195,7 @@ void sprite_draw(int x, int y, int bank, uint32_t frame, int sx, int sy)
     }
     if ((int)(frame & 0x3fffffff) >= sprite_frames(bank)) return;
     if (frame & SPR_SHEAR) {
-        static bool warned;
-        if (!warned) fprintf(stderr, "sprite_draw: sheared blitter 0x4197b0 not ported\n"), warned = true;
+        draw_sheared(x, y, bank, frame);
         return;
     }
     if (sx != SPR_SCALE_1 || sy != SPR_SCALE_1) {
