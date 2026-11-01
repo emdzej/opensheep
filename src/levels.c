@@ -17,7 +17,7 @@ static const struct {
     MoveFn (*move)(uint32_t va);
 } worlds[] = {
     { lv1_actor, NULL, lv1_move }, { lv2_actor, NULL, lv2_move }, { lv3_actor, lv3_call, lv3_move },
-    { lv4_actor, lv4_call, lv4_move }, { lv5_actor, NULL, lv5_move },
+    { lv4_actor, lv4_call, lv4_move }, { lv5_actor, NULL, lv5_move }, { lv6_actor, NULL, lv6_move },
 };
 
 void level_hook(uint32_t off)
