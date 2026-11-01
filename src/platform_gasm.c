@@ -352,6 +352,8 @@ GASM_EXPORT("gasm_init") int32_t opensheep_gasm_init(void)
     int argc = 0;
     args[argc++] = "opensheep";
     if (param("level", level_arg, sizeof level_arg) && *level_arg) { args[argc++] = "--level"; args[argc++] = level_arg; }
+    char view_arg[8];
+    if (param("view", view_arg, sizeof view_arg) && *view_arg == '1') args[argc++] = "--view";
     args[argc] = NULL;
     if (!app_init(argc, args)) return 1;
     running = true;

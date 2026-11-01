@@ -5,6 +5,7 @@
 #include <string.h>
 
 int g_world, g_level;
+uint32_t g_desc;   /* 0x4a20b4 */
 
 static char level_name[64];
 static char level_dir[128];   /* 0x49f89c */
@@ -24,6 +25,7 @@ bool world_select(int world, int level)
     if (!d) return false;
     g_world = world;
     g_level = level;
+    g_desc = d;
     exe_wstr(exe_u32(d), level_name, sizeof level_name);
     /* 0x4033a0: the folder is World0<w> for levels, World00 for the world map screens */
     snprintf(level_dir, sizeof level_dir, "Data\\World0%c\\%s\\", level == 0 ? '0' : '0' + world, level_name);
@@ -45,3 +47,5 @@ const char *world_level_path(const char *ext)
     snprintf(path, sizeof path, "%s%s%s", level_dir, level_name, ext);
     return path;
 }
+
+uint32_t desc_u32(uint32_t off) { return g_desc ? exe_u32(g_desc + off) : 0; }

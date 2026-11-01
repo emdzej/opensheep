@@ -1,9 +1,12 @@
-/* For now: a level viewer (load a level, scroll its map with the arrow keys / mouse drag, PageUp /
+/* For now: a level loaded straight into play (the shepherd on the keyboard: arrows, shift runs, ctrl
+   creeps, space acts), or with --view the level viewer:  (load a level, scroll its map with the arrow keys / mouse drag, PageUp /
    PageDown for the previous / next level; G: sprite gallery of the loaded banks, [ ] pick the bank). The front end and game states replace it as they are ported. */
 #include "app.h"
 #include "exe.h"
 #include "level.h"
 #include "objects.h"
+#include "play.h"
+#include "player.h"
 #include "render.h"
 #include "platform.h"
 #include "sprites.h"
@@ -13,12 +16,19 @@
 #include <string.h>
 
 static int view_x, view_y;
-static bool gallery;
+static bool gallery, viewer;
 static int gallery_bank = SPR_BANK_LEVEL;
 
 static bool load(int world, int level)
 {
     if (!world_select(world, level)) return false;
+    if (!viewer && level != 0) {
+        if (!level_load_resources()) return false;
+        level_start();
+        fprintf(stderr, "level %d.%d %s: %d sheep, %d to pen\n", world, level, world_level_name(), g_nsheep,
+                g_needed);
+        return true;
+    }
     if (!level_load_blo(world_level_path(".blo"))) return false;
     if (g_lv.cam_max_x <= g_lv.cam_min_x) {
         /* No bounds in the file (the menu level: Menu_SetPage 0x427870 sets one 640x480 page at a time);
@@ -59,6 +69,9 @@ bool app_init(int argc, char **argv)
     int world = 0, level = 0;
     for (int i = 1; i < argc; i++)
         if (!strcmp(argv[i], "--level") && i + 1 < argc) sscanf(argv[++i], "%d.%d", &world, &level);
+        else if (!strcmp(argv[i], "--view")) viewer = true;
+    game_new();
+    g_input_mode = 1;
     if (!exe_load()) { plat_error("OpenSheep", exe_error()); return false; }
     if (!plat_init("OpenSheep", 640, 480)) return false;
     if (!load(world, level) && !load(0, 0)) { plat_error("OpenSheep", "cannot load the level"); return false; }
@@ -98,6 +111,20 @@ bool app_frame(void)
             }
             fprintf(stderr, "bank %d: %d frames\n", gallery_bank, sprite_frames(gallery_bank));
         }
+    }
+    if (!viewer && g_level != 0) {
+        g_key_x = plat_key_down(KEY_RIGHT) - plat_key_down(KEY_LEFT);
+        g_key_y = plat_key_down(KEY_DOWN) - plat_key_down(KEY_UP);
+        g_key_run = plat_key_down(KEY_LSHIFT) || plat_key_down(KEY_RSHIFT);
+        g_key_creep = plat_key_down(KEY_LCTRL) || plat_key_down(KEY_RCTRL);
+        g_action = plat_key_down(KEY_SPACE) ? (g_action ? 2 : 1) : 0;
+        play_tick();
+        Framebuffer *fb = plat_fb();
+        memset(fb->pixels, 0, (size_t)fb->pitch * fb->h * 2);
+        play_draw(fb);
+        if (gallery) draw_gallery(fb);
+        plat_present();
+        return true;
     }
     int speed = plat_key_down(KEY_LSHIFT) || plat_key_down(KEY_RSHIFT) ? 24 : 8;
     if (plat_key_down(KEY_LEFT)) view_x -= speed;

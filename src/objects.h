@@ -38,31 +38,37 @@ typedef struct {                /* 0x47e070, 0x78 bytes */
     DrawRec rec;
 } StaticObj;
 
-typedef struct {                /* 0x459078, 0x10c bytes */
-    int32_t slot;
-    int32_t type;               /* -1 free; .ANM file: 0 player, 1 sheep, 2/3 level, 4 common */
-    int32_t depth_off;
-    int32_t state;              /* 1 animating, 2 stopped */
-    int32_t id;
-    int32_t x, y;
-    float fx, fy;
-    int32_t u24;
-    int32_t mirror;             /* +0x28 */
-    int32_t move;               /* +0x2c move routine: n standard (0x44c57c), n | 0x8000 level-specific */
-    int32_t u30;
-    int32_t anim;               /* +0x34 */
-    int32_t frame, prev_frame;  /* +0x38 */
-    int32_t nframes;            /* +0x40 */
-    int32_t pause;              /* +0x44 ticks per frame */
-    int32_t dir;                /* +0x48 */
-    int32_t countdown;          /* +0x4c */
-    int32_t loop;               /* +0x50 at the end: 0 stop, 1 remove, 2 restart */
-    int32_t param[8];           /* +0x54 from the .POS file */
-    int32_t u74[10];
-    int32_t sound_on;           /* +0x9c */
-    int32_t ua0[4];
-    DrawRec rec;                /* +0xb0 */
-    int32_t sound;              /* +0x108 */
+/* 0x459078, 0x10c bytes. Slots 0-29 are the sheep, 31 the player, 40+ level objects. The move
+   routines, the player and the sheep use dwords 0x15-0x2b as scratch whose meaning depends on the
+   routine; they reach them through d[] with the original dword index. */
+typedef union {
+    struct {
+        int32_t slot;
+        int32_t type;           /* -1 free; .ANM file: 0 player, 1 sheep, 2/3 level, 4 common */
+        int32_t depth_off;
+        int32_t state;          /* 1 animating, 2 stopped */
+        int32_t id;
+        int32_t x, y;           /* +0x14 */
+        float fx, fy;           /* +0x1c */
+        float speed;            /* +0x24 */
+        int32_t mirror;         /* +0x28 */
+        int32_t move;           /* +0x2c move routine: n standard (0x44c57c), n | 0x8000 level-specific */
+        int32_t sub;            /* +0x30 the routine's sub-state */
+        int32_t anim;           /* +0x34 */
+        int32_t frame, prev_frame;  /* +0x38 */
+        int32_t nframes;        /* +0x40 */
+        int32_t pause;          /* +0x44 ticks per frame */
+        int32_t dir;            /* +0x48 */
+        int32_t countdown;      /* +0x4c */
+        int32_t loop;           /* +0x50 at the end: 0 stop, 1 remove, 2 restart */
+        int32_t param[8];       /* +0x54 from the .POS file */
+        int32_t u74[10];
+        int32_t sound_on;       /* +0x9c */
+        int32_t ua0[4];
+        DrawRec rec;            /* +0xb0 */
+        int32_t sound;          /* +0x108 */
+    };
+    int32_t d[0x43];
 } AnimObj;
 
 enum {
@@ -87,6 +93,9 @@ int static_new(int x, int y, int anim, int dir);              /* 0x402220 */
 int anim_new(int x, int y, int anim, int dir, int type);      /* 0x402330 */
 void anim_set_frame(AnimObj *a);                              /* 0x401e90 */
 void anim_kill(AnimObj *a);                                   /* 0x4025c0 */
+void anim_init(int type, int slot, int anim, int dir);        /* 0x402490: 3 shepherd, 2 sheep */
+void anim_set(int slot, int anim, int dir);                   /* 0x402560: dir -1 keeps it */
+void anim_step(int slot, int dir, int step);                  /* 0x402630 */
 void rec_set_sprite(DrawRec *r, int bank, uint32_t frame);    /* 0x421b10 */
 /* 0x402700: one tick of animation and move routines. */
 void objects_update(void);

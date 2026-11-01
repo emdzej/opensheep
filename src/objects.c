@@ -286,6 +286,76 @@ void anim_kill(AnimObj *a)
     a->type = -1;
 }
 
+void anim_init(int type, int slot, int anim, int dir)
+{
+    /* 0x402490: the shepherd's (type 3) or a sheep's (type 2) animated object */
+    AnimObj *a = &g_anim[slot];
+    if (type == 3) { a->type = ANM_PLAYER; a->rec.shadow = 2; }
+    else { a->type = ANM_SHEEP; a->rec.shadow = 3; }
+    a->rec.kind = type;
+    a->rec.shadow_dy = 0;
+    a->anim = anim;
+    a->dir = dir & 0xf;
+    a->frame = 0;
+    a->pause = 0;
+    a->state = 1;
+    a->slot = slot;
+    a->depth_off = 0;
+    a->rec.depth = 0;
+    a->rec.tint = 0;
+    anim_set_frame(a);
+    a->countdown = a->pause;
+    a->sub = 0;
+    a->rec.clip_x0 = -1;
+    a->rec.scale_x = a->rec.scale_y = 0x100;
+    a->rec.sortable = 1;
+    a->rec.push = 0;
+    a->rec.layer = 1;
+    a->rec.mode = 1;
+}
+
+void anim_set(int slot, int anim, int dir)
+{
+    /* 0x402560 */
+    AnimObj *a = &g_anim[slot];
+    a->anim = anim;
+    if (dir != -1) a->dir = dir;
+    a->frame = 0;
+    a->pause = 0;
+    a->state = 1;
+    anim_set_frame(a);
+    a->countdown = a->pause;
+}
+
+void anim_step(int slot, int dir, int step)
+{
+    /* 0x402630: advance by step ticks, facing dir (-1: keep) */
+    AnimObj *a = &g_anim[slot];
+    if (dir != -1 && a->dir != dir) {
+        a->dir = dir;
+        a->rec.frame = 0xffffffffu;
+    }
+    if (a->state == 0) return;
+    if (a->state != 2) {
+        int c = a->countdown - step;
+        a->prev_frame = a->frame;
+        a->countdown = c;
+        while (c < 1) {
+            int f = a->frame;
+            a->frame = f + 1;
+            if (a->nframes <= f + 1) {
+                if (a->loop == 0) { a->state = 2; a->frame = f; }
+                else if (a->loop == 1) anim_kill(a);
+                else if (a->loop == 2) a->frame = 0;
+            }
+            anim_set_frame(a);
+            c = a->countdown + a->pause;
+            a->countdown = c;
+        }
+    }
+    if (a->rec.frame == 0xffffffffu) anim_set_frame(a);
+}
+
 /* ------------------------------------------------------------------ loading */
 
 void objects_load(const char *pos_path)
