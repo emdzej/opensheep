@@ -1,4 +1,5 @@
 #include "play.h"
+#include "cheats.h"
 #include "hud.h"
 #include "level.h"
 #include "input.h"
@@ -197,7 +198,7 @@ void play_tick(void)
     /* one pass of 0x40b9b0's tick loop */
     input_keys_tick();
     input_map();
-    /* TODO: the cheat keys (0x40b870) */
+    cheat_keys();
     if (g_score_flash) g_score_flash--;
     if (!g_paused && g_timer_on) g_clock++;
     if (g_clock == g_time_limit && g_world != 9 && !g_level_over) {

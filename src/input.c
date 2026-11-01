@@ -1,4 +1,5 @@
 #include "input.h"
+#include "cheats.h"
 #include "exe.h"
 #include "game.h"
 #include "keys.h"
@@ -68,6 +69,8 @@ void input_map(void)
     if (g_keyheld[DIK_RIGHT]) g_key_x = 1;
     if (g_keyheld[DIK_UP]) g_key_y = -1;
     if (g_keyheld[DIK_DOWN]) g_key_y = 1;
+    cheat_debug_keys();
+    cheat_world_keys();
     /* M / K / J pick mouse, keyboard or pad (TODO: 0x4395a0 re-acquires the devices) */
     if (g_keyheld[DIK_M]) { g_input_mode = 0; g_pad_buttons = 0; }
     if (g_keyheld[DIK_K]) { g_input_mode = 1; g_pad_buttons = 0; }

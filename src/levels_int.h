@@ -94,6 +94,7 @@ bool lv5_actor(uint32_t va, int32_t *actor);
 MoveFn lv5_move(uint32_t va);
 bool lv6_actor(uint32_t va, int32_t *actor);
 MoveFn lv6_move(uint32_t va);
+extern int *const g_w7_penned, *const g_w7_total;   /* 0x66b58c, 0x66b59c: per breed (the results read them) */
 bool lv7_actor(uint32_t va, int32_t *actor);
 bool lv7_call(uint32_t va);
 MoveFn lv7_move(uint32_t va);

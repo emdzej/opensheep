@@ -330,7 +330,7 @@ static bool param(const char *name, char *dst, uint32_t cap) { return gasm_param
 /* ------------------------------------------------------------------ exports */
 
 static char *args[8];
-static char level_arg[64];
+static char level_arg[64], ini_arg[512];
 static bool running;
 
 GASM_EXPORT("gasm_abi_version") int32_t opensheep_gasm_abi_version(void) { return GASM_ABI_VERSION; }
@@ -356,6 +356,13 @@ GASM_EXPORT("gasm_init") int32_t opensheep_gasm_init(void)
     if (param("view", view_arg, sizeof view_arg) && *view_arg == '1') args[argc++] = "--view";
     char trace_arg[8];
     if (param("trace", trace_arg, sizeof trace_arg) && *trace_arg == '1') args[argc++] = "--trace";
+    if (param("ini", ini_arg, sizeof ini_arg) && *ini_arg) {
+        /* Sheep.ini lines, ';' between them */
+        for (char *c = ini_arg; *c; c++)
+            if (*c == ';') *c = '\n';
+        args[argc++] = "--ini";
+        args[argc++] = ini_arg;
+    }
     args[argc] = NULL;
     if (!app_init(argc, args)) return 1;
     running = true;

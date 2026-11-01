@@ -24,6 +24,8 @@ enum { XFORM_NONE = 0, XFORM_MIRROR = 1, XFORM_FLIP = 2, XFORM_BOTH = 3 };
    transformed variants 0x4368b0 / 0x4369c0 / 0x436ad0). NULL on allocation failure. */
 Surface *surface_from_pixels(const uint16_t *src, int w, int h, int xform);
 void surface_free(Surface *s);
+/* A .bmp file (24 or 8 bits) as a surface (0x436be0 / 0x437b20); NULL if it is missing or not a bmp. */
+Surface *surface_load_bmp(const char *path);
 
 /* BltFast of src (r = NULL: all of it) to (x, y) of the framebuffer (0x437a50 whole, 0x437aa0 with a
    rectangle; an empty or inverted rectangle draws nothing and succeeds). */

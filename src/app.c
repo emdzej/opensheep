@@ -4,6 +4,7 @@
 #include "app.h"
 #include "exe.h"
 #include "flow.h"
+#include "cheats.h"
 #include "font.h"
 #include "hud.h"
 #include "xp.h"
@@ -91,7 +92,10 @@ bool app_init(int argc, char **argv)
     g_input_mode = 1;
     if (!exe_load()) { plat_error("OpenSheep", exe_error()); return false; }
     if (!plat_init("OpenSheep", 640, 480)) return false;
-    /* 0x438350: main.xp is mounted and the texts loaded once, at start-up */
+    /* 0x438350: Sheep.ini, then main.xp is mounted and the texts loaded once, at start-up */
+    ini_load();
+    for (int i = 1; i + 1 < argc; i++)
+        if (!strcmp(argv[i], "--ini")) ini_parse(argv[i + 1], strlen(argv[i + 1]));
     xp_mount("main.xp");
     if (!strings_load()) fprintf(stderr, "no GameStrings\n");
     if (!fonts_load()) fprintf(stderr, "no fonts\n");

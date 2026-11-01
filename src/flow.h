@@ -23,3 +23,13 @@ extern bool g_quit;                 /* PostQuitMessage */
 bool flow_frame(Framebuffer *fb);
 /* Start at a state (APP_START for the movies, APP_MENU for the menu). */
 void flow_start(int state);
+/* 0x422930: a key, a pad button or the mouse button went down (not one still held from before). */
+bool flow_any_key(void);
+/* The movie after world n ("World0n.bik", 0x44b218). */
+void flow_world_movie(int n);
+/* 0x40f2a0: a new game at world g_next_level / 6, level g_next_level % 6 (the level state). */
+void flow_new_game(void);
+/* 0x406cc0(1): the level loaded again from its start, in the middle of its tick. */
+void flow_level_reload(void);
+/* menu.c: a save's name being typed (0x65ffa8): the keys are text. */
+bool menu_naming(void);

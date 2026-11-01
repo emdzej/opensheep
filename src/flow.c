@@ -1,4 +1,5 @@
 #include "flow.h"
+#include "cheats.h"
 #include "exe.h"
 #include "font.h"
 #include "hud.h"
@@ -7,6 +8,7 @@
 #include "levels.h"
 #include "moves.h"
 #include "play.h"
+#include "results.h"
 #include "player.h"
 #include "sprites.h"
 #include "world.h"
@@ -36,7 +38,7 @@ static int bits4(int v)
 
 static int bit(int i) { return (int)exe_u32(0x44b198 + 4 * (uint32_t)i); }
 
-static bool any_key(void)
+bool flow_any_key(void)
 {
     /* 0x422930: a key, a pad button or the mouse button that went down */
     if (g_input_mode != 2 && g_input_mode != 3) g_pad_buttons = 0;
@@ -78,7 +80,7 @@ static void movie(const char *path)
     key_latch = 1;
 }
 
-static void world_movie(int world)
+void flow_world_movie(int world)
 {
     /* "data\biks\World01.bik" (0x44b218) with the world's digit at [0x10] */
     char path[32];
@@ -141,14 +143,14 @@ static void after_level(void)
         }
         if (g_end != 1 && g_end != 7) { go(APP_MENU, 0, 0); return; }
         if (g_world == 7) {
-            world_movie(7);
+            flow_world_movie(7);
             g_next_world = 0;
             go(APP_MENU, 0, 0);
             return;
         }
         if (g_level == 5) {
             /* the world's last level done: on to the next world's map */
-            world_movie(g_theme);
+            flow_world_movie(g_theme);
             g_theme++;
             g_prog.levels = g_prog.breeds = g_prog.bonus = 0;
             g_next_world = g_theme;
@@ -171,7 +173,7 @@ static void after_level(void)
             return;
         }
         if (g_game_mode != 2) {
-            world_movie(g_theme);
+            flow_world_movie(g_theme);
             int w = next_world(g_theme);
             g_theme = (int8_t)w;
             if (w != -1) {
@@ -184,16 +186,6 @@ static void after_level(void)
         }
     }
     go(APP_MENU, 0, 0);
-}
-
-static void results_begin(int end)
-{
-    /* 0x40ff30 (part): what the results screen adds to the game. TODO: the screen itself (0x410bc0),
-       its score count and the bonus for the whole flock */
-    g_4b911c = 1;
-    if (g_level != 5) g_prog.u84 += g_clock;
-    if (g_world == 9) g_prog.u88 = (int8_t)(g_prog.u88 + g_saved);
-    (void)end;
 }
 
 static void results_end(void)
@@ -235,6 +227,36 @@ static bool level_begin(void)
     return true;
 }
 
+void flow_level_reload(void)
+{
+    level_hook(DESC_RELEASE);
+    if (level_load_resources()) level_start();
+}
+
+/* A new game's progress: the flock of 10 a breed (20 on the hardest), nothing done. */
+static void new_progress(void)
+{
+    memset(g_prog.worlds, 0, sizeof g_prog.worlds);
+    g_prog.score = 0;
+    g_prog.breeds = g_prog.levels = g_prog.bonus = 0;
+    int8_t n = g_difficulty > 1 ? 0x14 : 10;
+    for (int b = 0; b < 4; b++) g_flock_size[b] = n;
+}
+
+void flow_new_game(void)
+{
+    /* 0x40f2a0 (TODO: 0x4b9678, the hint shown, cleared) */
+    g_next_world = g_next_level / 6;
+    g_next_level %= 6;
+    g_app_state = APP_LEVEL;
+    g_app_sub = 0;
+    g_theme = (int8_t)g_next_world;
+    new_progress();
+    g_world = g_next_world;
+    g_level = g_next_level;
+    input_keys_tick();
+}
+
 static void loading_draw(Framebuffer *fb)
 {
     /* 0x409d70(2): the loading picture (TODO: the level's .bmp, 0x408fb0) and "press a key" blinking */
@@ -256,7 +278,7 @@ static void level_end(void)
     case 1: case 3: case 4: case 5: case 7:
         if (g_theme == 9) g_end = 1;
         if (g_theme == 9 || g_end == 1 || g_end == 7) g_prog.worlds[g_theme] |= (uint8_t)bit(g_level);
-        results_begin(g_end);
+        results_start(g_end);
         g_app_state = APP_RESULTS;
         g_app_sub = 0;
         break;
@@ -291,9 +313,23 @@ bool flow_frame(Framebuffer *fb)
     if (g_quit) return false;
     switch (g_app_state) {
     case APP_START:
-        movie(exe_str(0x44b990));
-        g_app_state = APP_LOGOS;
-        g_app_sub = 0;
+        input_keys_tick();
+        input_map();
+        if (!g_bypass) {
+            movie(exe_str(0x44b990));
+            g_app_state = APP_LOGOS;
+            g_app_sub = 0;
+        } else {
+            /* BYPASS_FRONTEND: straight into START_WORLD.START_LEVEL as Bo Peep */
+            g_level = g_next_level = g_start_level;
+            g_theme = (int8_t)g_start_world;
+            g_next_world = g_start_world;
+            g_char = 0;
+            new_progress();
+            g_app_state = APP_LEVEL;
+            g_app_sub = 0;
+            g_world = g_next_world;
+        }
         break;
     case APP_LOGOS:
         g_app_state = APP_INTRO;
@@ -315,7 +351,7 @@ bool flow_frame(Framebuffer *fb)
         } else if (g_app_sub == 1) {
             input_keys_tick();
             loading_draw(fb);
-            if (g_demo == 2 || g_world == 0 || g_level == 0 || any_key()) g_app_sub = 2;
+            if (g_demo == 2 || g_world == 0 || g_level == 0 || flow_any_key()) g_app_sub = 2;
         } else {
             play_tick();
             memset(fb->pixels, 0, (size_t)fb->pitch * fb->h * 2);
@@ -327,7 +363,8 @@ bool flow_frame(Framebuffer *fb)
         go(APP_LEVEL, g_next_world, g_next_level);
         break;
     case APP_RESULTS:
-        results_end();
+        if (g_app_sub == 0) results_frame(fb);
+        else results_end();
         break;
     case APP_CREDITS:
         /* TODO: the credits (0x40d7a0, 0x40d9e0, 0x40dc70) */

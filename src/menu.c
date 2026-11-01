@@ -30,6 +30,8 @@ enum {
 static int page;                    /* 0x65ffa4 */
 static int sel = -1;                /* 0x660004: the button chosen this tick, -1 none */
 static int naming;                  /* 0x65ffa8: typing a save's name */
+
+bool menu_naming(void) { return naming != 0; }
 static int idle;                    /* 0x65fffc: ticks without a move (to the attract mode) */
 static int back_latch;              /* 0x660000: pad button 4 */
 static int demo_i;                  /* 0x660014 */

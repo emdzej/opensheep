@@ -1,4 +1,5 @@
 #include "surface.h"
+#include "xp.h"
 #include <stdlib.h>
 
 Surface *surface_from_pixels(const uint16_t *src, int w, int h, int xform)
@@ -48,4 +49,38 @@ bool surface_blt_fast(Framebuffer *dst, int x, int y, const Surface *src, const 
         }
     }
     return true;
+}
+
+static uint32_t le32(const uint8_t *p) { return p[0] | p[1] << 8 | p[2] << 16 | (uint32_t)p[3] << 24; }
+
+Surface *surface_load_bmp(const char *path)
+{
+    /* 0x437b20: the file into a DIB section, then GDI's copy into the 16-bit surface */
+    size_t n = 0;
+    uint8_t *f = file_load(path, &n);
+    if (!f) return NULL;
+    Surface *s = NULL;
+    if (n < 54 || f[0] != 'B' || f[1] != 'M') goto out;
+    uint32_t off = le32(f + 10), hdr = le32(f + 14);
+    int w = (int32_t)le32(f + 18), h = (int32_t)le32(f + 22), bpp = f[28] | f[29] << 8;
+    bool top_down = h < 0;
+    if (top_down) h = -h;
+    if (w <= 0 || h <= 0 || w > 4096 || h > 4096 || (bpp != 24 && bpp != 8) || le32(f + 30)) goto out;
+    size_t stride = ((size_t)w * (size_t)bpp / 8 + 3) & ~(size_t)3;
+    const uint8_t *pal = f + 14 + hdr;
+    if ((size_t)off + stride * (size_t)h > n || (bpp == 8 && (size_t)(pal - f) + 1024 > n)) goto out;
+    uint16_t *px = malloc((size_t)w * (size_t)h * sizeof *px);
+    if (!px) goto out;
+    for (int y = 0; y < h; y++) {
+        const uint8_t *row = f + off + stride * (size_t)(top_down ? y : h - 1 - y);
+        for (int x = 0; x < w; x++) {
+            const uint8_t *c = bpp == 24 ? row + 3 * x : pal + 4 * row[x];   /* b, g, r */
+            px[y * w + x] = (uint16_t)((c[2] >> 3) << 11 | (c[1] >> 2) << 5 | c[0] >> 3);
+        }
+    }
+    s = surface_from_pixels(px, w, h, XFORM_NONE);
+    free(px);
+out:
+    free(f);
+    return s;
 }

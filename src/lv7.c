@@ -12,6 +12,7 @@ static AnimObj *drawn[FLOCK];             /* 0x66b3a8 */
 static int penned[BREEDS];                /* 0x66b58c */
 static int total[BREEDS];                 /* 0x66b59c */
 static int lost[BREEDS];                  /* 0x66b5ac */
+int *const g_w7_penned = penned, *const g_w7_total = total;
 static int open_breed = -1;               /* 0x66b588: the breed whose pen gate is open */
 
 static void lv71_fail(int why)
