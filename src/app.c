@@ -1,15 +1,18 @@
 /* For now: a level viewer (load a level, scroll its map with the arrow keys / mouse drag, PageUp /
-   PageDown for the previous / next level). The front end and game states replace it as they are ported. */
+   PageDown for the previous / next level; G: sprite gallery of the loaded banks, [ ] pick the bank). The front end and game states replace it as they are ported. */
 #include "app.h"
 #include "exe.h"
 #include "level.h"
 #include "platform.h"
+#include "sprites.h"
 #include "world.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 static int view_x, view_y;
+static bool gallery;
+static int gallery_bank = SPR_BANK_LEVEL;
 
 static bool load(int world, int level)
 {
@@ -22,6 +25,12 @@ static bool load(int world, int level)
         g_lv.cam_max_x = g_lv.px_w;
         g_lv.cam_max_y = g_lv.px_h;
     }
+    sprite_banks_free_all();
+    int nb = level_load_sprite_banks();
+    sprite_bank_load_misc(SPR_BANK_MISC, "Misc.spr");
+    sprite_bank_load_misc(SPR_BANK_TEXT_YELLOW, "TextYellow.spr");
+    sprite_bank_load_misc(SPR_BANK_TEXT_BLUE, "TextBlue.spr");
+    fprintf(stderr, "sprite banks: %d of %d\n", nb, g_lv.nbanks);
     view_x = g_lv.cam_min_x;
     view_y = g_lv.cam_min_y;
     level_set_camera(view_x, view_y);
@@ -52,6 +61,23 @@ bool app_init(int argc, char **argv)
     return true;
 }
 
+/* The frames of gallery_bank in rows, over the map (so the blending shows). */
+static void draw_gallery(Framebuffer *fb)
+{
+    sprite_target(fb);
+    sprite_clip(0, 0, fb->w, fb->h);
+    int x = 4, y = 4, row_h = 0;
+    for (int i = 0; i < sprite_frames(gallery_bank); i++) {
+        SprFrame f;
+        if (!sprite_frame(gallery_bank, i, &f)) continue;
+        if (x + f.w > fb->w && x > 4) { x = 4; y += row_h + 4; row_h = 0; }
+        if (y >= fb->h) break;
+        sprite_draw(x, y, gallery_bank, (uint32_t)i, SPR_SCALE_1, SPR_SCALE_1);
+        x += f.w + 4;
+        if (f.h > row_h) row_h = f.h;
+    }
+}
+
 bool app_frame(void)
 {
     if (!plat_poll()) return false;
@@ -59,6 +85,15 @@ bool app_frame(void)
     for (int i = 0; i < n; i++) {
         if (keys[i] == KEY_PAGEDOWN) step_level(1);
         if (keys[i] == KEY_PAGEUP) step_level(-1);
+        if (keys[i] == KEY_G) gallery = !gallery;
+        if (keys[i] == KEY_RIGHTBRACKET || keys[i] == KEY_LEFTBRACKET) {
+            int d = keys[i] == KEY_RIGHTBRACKET ? 1 : -1;
+            for (int k = 0; k < SPR_BANKS; k++) {
+                gallery_bank = (gallery_bank + d + SPR_BANKS) % SPR_BANKS;
+                if (sprite_frames(gallery_bank)) break;
+            }
+            fprintf(stderr, "bank %d: %d frames\n", gallery_bank, sprite_frames(gallery_bank));
+        }
     }
     int speed = plat_key_down(KEY_LSHIFT) || plat_key_down(KEY_RSHIFT) ? 24 : 8;
     if (plat_key_down(KEY_LEFT)) view_x -= speed;
@@ -74,6 +109,7 @@ bool app_frame(void)
     Framebuffer *fb = plat_fb();
     memset(fb->pixels, 0, (size_t)fb->pitch * fb->h * 2);
     level_draw_map(fb);
+    if (gallery) draw_gallery(fb);
     plat_present();
     return true;
 }

@@ -29,6 +29,8 @@ typedef struct {
     uint32_t *cells;                /* 0x4a20a0: w * h u32, low byte = cell type */
     uint32_t *layer3;               /* 0x4a1ea8: w * h u32 */
     uint8_t *tab1, *tab2;           /* 0x4a1ed8 (0x18000 + 0x4800), 0x4a2094 */
+    uint8_t *banks;                 /* 0x4a1ee4: table A, 256-byte sprite strip paths */
+    int nbanks;                     /* 0x4a20c0 */
     uint8_t *anim_frames;           /* 0x4a209c entries of 32 bytes (DAT_004a209c = count at +0x1c) */
     int nanim_frames;
     uint16_t remap[MAX_TILES];      /* 0x4ae444: tile number - 1 -> tile slot (identity after load) */
@@ -43,6 +45,9 @@ extern Level g_lv;
 
 /* Level_LoadBLO 0x4072d0 + Level_InitTileAnims 0x407830. path is a game path ("Data\World01\..."). */
 bool level_load_blo(const char *path);
+/* The level's sprite banks 100 + i from table A (part of Level_LoadResources 0x401950). Returns how
+   many loaded. */
+int level_load_sprite_banks(void);
 /* Level_ReleaseTiles 0x4077b0 plus freeing the file. */
 void level_release(void);
 /* Clamp the camera to the level's bounds and derive the fine scroll (tail of Camera_Update 0x40cb40). */

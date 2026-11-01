@@ -41,3 +41,12 @@
 4adeb4 g_camY
 4a3d58 g_fineX
 4a3d5c g_fineY
+401950 Level_LoadResources
+401240 Level_LoadAnims
+421ba0 Sprite_LoadMiscBank
+421c60 Sprite_LoadBank
+4218c0 Sprite_Tint
+4197b0 Sprite_DrawSheared
+420320 Sprite_DrawScaled
+41fce0 Sprite_Draw555
+4bc294 g_spriteBanks

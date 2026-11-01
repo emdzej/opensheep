@@ -1,5 +1,6 @@
 /* Level file loading and the tile map renderer. */
 #include "level.h"
+#include "sprites.h"
 #include "xp.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -114,6 +115,8 @@ bool level_load_blo(const char *path)
     g_lv.cam_max_y = hdr32(b, 0x34);
     g_lv.px_w = w << 5;
     g_lv.px_h = h * TILE_H;
+    g_lv.banks = b + off_anim + (size_t)nc * 32 + (size_t)nb * 20;
+    g_lv.nbanks = na;
     g_lv.anim_frames = b + off_anim;
     g_lv.nanim_frames = nc;
     g_lv.map = (uint16_t *)(b + off_map);
@@ -185,4 +188,29 @@ void level_draw_map(Framebuffer *fb)
             surface_blt_fast(fb, x, y, s, &src);
         }
     }
+}
+
+int level_load_sprite_banks(void)
+{
+    /* Level_LoadResources 0x401950: table A holds the artists' paths of the level's sprite strips
+       ("U:\PROC\World01\Sprites\CFlower_A080000.tga"). The drive folder is overwritten with "DATA"
+       in place, a frame number (5 digits before the extension) is cut, and ".SPR" appended: bank 100 + i
+       = "DATA\World01\Sprites\CFlower_A0.SPR". */
+    int loaded = 0;
+    for (int i = 0; i < g_lv.nbanks && SPR_BANK_LEVEL + i < SPR_BANKS; i++) {
+        char *e = (char *)g_lv.banks + 256 * i;
+        memcpy(e + 3, "DATA", 4);
+        char path[260];
+        size_t n = strnlen(e + 3, 252);
+        memcpy(path, e + 3, n);
+        path[n] = 0;
+        char *end = path + n, *cut = end - 9;
+        bool digits = n >= 9;
+        for (int k = 0; digits && k < 5; k++)
+            if (cut[k] < '0' || cut[k] > '9') digits = false;
+        if (!digits) cut = n >= 4 ? end - 4 : end;
+        strcpy(cut, ".SPR");
+        if (sprite_bank_load(SPR_BANK_LEVEL + i, path)) loaded++;
+    }
+    return loaded;
 }
