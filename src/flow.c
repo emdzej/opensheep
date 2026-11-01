@@ -11,6 +11,7 @@
 #include "play.h"
 #include "results.h"
 #include "hiscore.h"
+#include "hint.h"
 #include "credits.h"
 #include "player.h"
 #include "sprites.h"
@@ -399,6 +400,8 @@ static void leave_level(void)
 {
     level_release();
     anims_free();
+    g_hint_shown = 0;
+    hint_text_free();
     sprite_banks_free_all();
 }
 

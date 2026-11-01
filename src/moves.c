@@ -128,14 +128,6 @@ void push_out_of_rect(int x, int y, int w, int h)
     if (inside(g_player.x, g_player.y, x, y, w, h)) push_point(&g_player.x, &g_player.y, x, y, w, h);
 }
 
-void hint_show(int n)
-{
-    /* 0x411a70 looks the number up in the level's hint text; the text and its drawing are not ported
-       yet, so only the state the sign routines test is kept. */
-    g_hint = n;
-    g_hint_shown = 1;
-}
-
 /* ------------------------------------------------------------------ standard routines */
 
 static void move_01(AnimObj *a)

@@ -7,6 +7,8 @@
 
 extern int g_lang;                   /* 0x4a40ba: index into ENGLISH.. (0x44afa4); 0 English */
 
+/* ".txe" with the language's letter (0x44a098 as 0x4233b0 leaves it, letters 0x456264). */
+const char *lang_ext(void);
 /* 0x4233b0: load the string table of the current language; 0x423700 frees it. */
 bool strings_load(void);
 void strings_free(void);

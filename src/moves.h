@@ -38,5 +38,5 @@ void gate_set(int g, int open);
 void gates_init(void);
 /* 0x411560: push the sheep and the shepherd out of the rectangle (sheep in state 0x15 walk again). */
 void push_out_of_rect(int x, int y, int w, int h);
-/* 0x411a70: the hint text with number n (text file 0x47db60; TODO: the texts). */
+/* 0x411a70: show the hint with number n from the level's text (hint.c). */
 void hint_show(int n);

@@ -1,5 +1,6 @@
 #include "play.h"
 #include "cheats.h"
+#include "hint.h"
 #include "hud.h"
 #include "level.h"
 #include "input.h"
@@ -57,7 +58,7 @@ bool level_load_resources(void)
     g_nattract = 0;
     specials_load();
     gates_init();
-    /* TODO: the texts (0x401620) */
+    hint_text_load();
     game_init_deflect();
     g_loading = 0;
     return true;
@@ -231,4 +232,5 @@ void play_draw(Framebuffer *fb)
     render_sorted(fb);
     level_hook(DESC_DRAW2);
     hud_draw();
+    hint_draw();
 }

@@ -14,3 +14,5 @@ void fonts_free(void);
 void font_draw(int x, int y, const uint16_t *s, int f, uint32_t rgb);
 /* The width of s in font f (the box 0x404a50 measures). */
 int font_width(const uint16_t *s, int f);
+/* 0x404a50: the box {left, top, right, bottom} of the ink of s in font f drawn at (0, 0). */
+void font_box(const uint16_t *s, int f, int box[4]);

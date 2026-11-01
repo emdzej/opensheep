@@ -69,13 +69,19 @@ static int entry_id(const uint16_t *line, size_t *text)
     return atoi(word);
 }
 
+const char *lang_ext(void)
+{
+    static char ext[8];
+    snprintf(ext, sizeof ext, "%s", exe_str(0x44a098));
+    ext[3] = (char)exe_u8(0x456264 + (uint32_t)(g_lang & 0xf));
+    return ext;
+}
+
 bool strings_load(void)
 {
     /* 0x4233b0 on "data\local\GameStrings" + ".txe" with the language letter (0x44a098, 0x456264) */
-    char ext[8], path[64];
-    snprintf(ext, sizeof ext, "%s", exe_str(0x44a098));
-    ext[3] = (char)exe_u8(0x456264 + (uint32_t)(g_lang & 0xf));
-    snprintf(path, sizeof path, exe_str(0x45628c), ext);
+    char path[64];
+    snprintf(path, sizeof path, exe_str(0x45628c), lang_ext());
     strings_free();
     size_t size = 0;
     uint8_t *f = file_load(path, &size);

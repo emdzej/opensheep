@@ -147,13 +147,28 @@ static void draw_glyph(Framebuffer *fb, const Font *f, const uint8_t *g, int x, 
 #undef PIX
 }
 
+/* 0x404e10's box of the glyphs it would draw (a glyph above the top is not measured here: the only
+   measures are of text at y 0) */
+static void ink(int *box, const uint8_t *g, int x, int y)
+{
+    if (g[4] & 1) return;
+    int w = g[0], h = g[1], gx = g[2] + x, gy = g[3] + y;
+    if (x + w >= 0x280 || y < 0 || h + y >= 0x1e0) return;
+    if (h + gy >= 0x1e0) h = 0x1e0 - gy;
+    if (h <= 0 || gy < 0) return;
+    if (gx < box[0]) box[0] = gx;
+    if (gy < box[1]) box[1] = gy;
+    if (box[2] < gx + w) box[2] = gx + w;
+    if (box[3] < gy + h) box[3] = gy + h;
+}
+
 static uint16_t rgb565(uint32_t c)
 {
     return (uint16_t)((c >> 8 & 0xf800) | (c >> 5 & 0x7e0) | (c >> 3 & 0x1f));
 }
 
 /* 0x404cf0 over the 640 x 480 box (0x421d60 passes it) */
-static int run(const uint16_t *s, int x, int y, int fi, uint32_t rgb, bool draw)
+static int run(const uint16_t *s, int x, int y, int fi, uint32_t rgb, bool draw, int *box)
 {
     const Font *f = &fonts[fi < 0 || fi >= FONTS ? 0 : fi];
     Framebuffer *fb = sprite_get_target();
@@ -172,12 +187,25 @@ static int run(const uint16_t *s, int x, int y, int fi, uint32_t rgb, bool draw)
         if (!g || x > 0x280) continue;
         if (0x1e0 < f->line_h + y) break;
         if (draw && fb && y >= 0) draw_glyph(fb, f, g, x, y, col);
+        if (box && y >= 0) ink(box, g, x, y);
         x += g[0] + g[2] + f->spacing;
         if (x > right) right = x;
     }
     return right - x0;
 }
 
-void font_draw(int x, int y, const uint16_t *s, int f, uint32_t rgb) { run(s, x, y, f, rgb, true); }
+void font_draw(int x, int y, const uint16_t *s, int f, uint32_t rgb) { run(s, x, y, f, rgb, true, NULL); }
 
-int font_width(const uint16_t *s, int f) { return run(s, 0, 0, f, 0, false); }
+int font_width(const uint16_t *s, int f) { return run(s, 0, 0, f, 0, false, NULL); }
+
+void font_box(const uint16_t *s, int f, int box[4])
+{
+    /* 0x404b10: the box starts inverted and is clamped to the screen */
+    box[0] = box[1] = 10000;
+    box[2] = box[3] = -10000;
+    run(s, 0, 0, f, 0, false, box);
+    if (box[1] < 0) box[1] = 0;
+    if (box[3] > 0x1e0) box[3] = 0x1e0;
+    if (box[0] < 0) box[0] = 0;
+    if (box[2] > 0x280) box[2] = 0x280;
+}
