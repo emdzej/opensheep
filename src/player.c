@@ -505,7 +505,11 @@ void player_specials(int x, int y, Player *p, int act)
         }
         break;
     default:
-        fprintf(stderr, "Unknown specific type encountered %d\n", s->type);
+        {
+            /* the original's trace (0x422290) logs it every time; once per type here */
+            static uint8_t said[256];
+            if (!said[(uint8_t)s->type]++) fprintf(stderr, "Unknown specific type encountered %d\n", s->type);
+        }
         break;
     }
 }
