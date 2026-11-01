@@ -1,4 +1,5 @@
 #include "surface.h"
+#include "exe.h"
 #include "xp.h"
 #include <stdlib.h>
 #include <string.h>
@@ -133,4 +134,29 @@ out:
     free(raw);
     free(f);
     return s;
+}
+
+void surface_save_bmp(const char *name, const Framebuffer *fb)
+{
+    enum { W = 0x280, H = 0x1e0, HDR = 0x36, SIZE = HDR + W * H * 3 };
+    uint8_t *b = malloc(SIZE);
+    if (!b) return;
+    for (int i = 0; i < HDR; i++) b[i] = exe_u8(0x45055c + (uint32_t)i);
+    static const struct { int at, bytes; uint32_t v; } patch[] = {
+        { 0x2e, 4, 0 }, { 0x32, 4, 0 }, { 0x12, 4, W }, { 0x16, 4, H }, { 0x1c, 2, 0x18 },
+        { 0x0a, 4, HDR }, { 0x22, 4, W * H * 3 }, { 0x02, 4, SIZE },
+    };
+    for (size_t k = 0; k < sizeof patch / sizeof patch[0]; k++)
+        for (int i = 0; i < patch[k].bytes; i++) b[patch[k].at + i] = (uint8_t)(patch[k].v >> 8 * i);
+    /* rgb565 (the 0x4375f0 == 0 branch), the last row first */
+    uint8_t *o = b + HDR;
+    for (int y = H - 1; y >= 0; y--)
+        for (int x = 0; x < W; x++, o += 3) {
+            uint16_t v = x < fb->w && y < fb->h ? fb->pixels[y * fb->pitch + x] : 0;
+            o[0] = (uint8_t)(v << 3);
+            o[1] = (uint8_t)(v >> 3) & 0xfc;
+            o[2] = (uint8_t)(v >> 8) & 0xf8;
+        }
+    plat_storage_set(name, b, SIZE);
+    free(b);
 }

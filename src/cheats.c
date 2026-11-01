@@ -10,6 +10,8 @@
 #include "play.h"
 #include "platform.h"
 #include "sound.h"
+#include "sprites.h"
+#include "surface.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -113,7 +115,7 @@ void cheat_keys(void)
     /* 0x40b870, every tick of a level */
     if (menu_naming()) return;
     if (g_our_menu) {
-        /* I: TODO: 0x40b720 draws the level's tile map over the screen */
+        if (g_keyheld[DIK_I] == 1) cheat_font_chart();
         if (g_keyheld[0x13] == 1) {
             /* R: the level again from its start (a demo being played carries on recording) */
             if (g_demo) g_demo = 1;
@@ -142,8 +144,49 @@ quit:
 
 void cheat_debug_keys(void)
 {
-    /* part of 0x408ca0, with OUR_MENU: Home stops the actors (TODO: the editor 0x40aea0 it runs then);
-       P without shift saves a screenshot (TODO: 0x422580, Sheep0001.bmp on) */
+    /* part of 0x408ca0, with OUR_MENU: Home stops the actors (TODO: the editor 0x40aea0 it runs then) */
     if (!g_our_menu) return;
     if (g_keyheld[0xc7] == 1) g_frozen = !g_frozen;
+}
+
+void cheat_screenshot(void)
+{
+    /* the end of 0x408ca0, with OUR_MENU: P without shift saves the screen (0x422580) to
+       Sheep0001.bmp, then counts on in the name's digits (after 9999, "Sheep:000"), then reads the
+       devices again */
+    static char name[16];
+    if (!g_our_menu || !g_keyheld[DIK_P] || g_keyheld[DIK_LSHIFT]) return;
+    if (!name[0]) snprintf(name, sizeof name, "%s", exe_str(0x450594));
+    Framebuffer *fb = sprite_get_target();
+    if (fb) surface_save_bmp(name, fb);
+    for (int i = 8; i > 5 && ++name[i] > '9'; i--) {
+        name[i] = '0';
+        if (i == 6) name[5]++;
+    }
+    input_keys_tick();
+}
+
+void cheat_font_chart(void)
+{
+    /* 0x40b720, with OUR_MENU and I held: the TextYellow characters from ' ' on, one to a 32 x 32
+       cell in two greys, 16 by 7, saved as MyFont.bmp. The original passes a one-character string
+       without its terminator (the next stack word, its cell counter, is read as a second character);
+       here it is terminated */
+    static uint16_t px[640 * 480];
+    Framebuffer fb = { 640, 480, 640, px }, *was = sprite_get_target();
+    memset(px, 0, sizeof px);
+    sprite_target(&fb);
+    int ch = 0x20, cell = 0;
+    for (int row = 1, y = 0x24; y < 0x104; row++, y += 0x20, cell++) {
+        for (int col = 0, x = 0x24; x < 0x224; col++, x += 0x20, cell++) {
+            uint16_t grey = cell & 1 ? 0x73ce : 0x39e7;
+            for (int r = 0; r < 32; r++)
+                for (int i = 0; i < 32; i++) px[(32 * row + r) * 640 + 32 * (1 + col) + i] = grey;
+            uint16_t s[2] = { (uint16_t)((exe_u16(0x44b9d0) & 0xff00) | (ch & 0xff)), 0 };
+            text_draw(s, x, y);
+            ch++;
+        }
+    }
+    surface_save_bmp(exe_str(0x44b9c4), &fb);
+    sprite_target(was);
 }

@@ -32,3 +32,7 @@ Surface *surface_load_tga(const char *path);
 /* BltFast of src (r = NULL: all of it) to (x, y) of the framebuffer (0x437a50 whole, 0x437aa0 with a
    rectangle; an empty or inverted rectangle draws nothing and succeeds). */
 bool surface_blt_fast(Framebuffer *dst, int x, int y, const Surface *src, const Rect *r);
+
+/* 0x422450: the 640 x 480 framebuffer as a 24-bit bottom-up .bmp (the header at 0x45055c, patched),
+   written to the host's storage under name. */
+void surface_save_bmp(const char *name, const Framebuffer *fb);

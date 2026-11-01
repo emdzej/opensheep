@@ -16,3 +16,6 @@ void cheat_keys(void);
 /* Parts of 0x408ca0: WORLD_CHEAT's 1-7 and OUR_MENU's Home. */
 void cheat_world_keys(void);
 void cheat_debug_keys(void);
+/* With OUR_MENU: P saves a screenshot (0x422580); I the debug font's chart (0x40b720). */
+void cheat_screenshot(void);
+void cheat_font_chart(void);

@@ -81,6 +81,7 @@ void input_map(void)
     if (g_keyheld[DIK_M]) { g_input_mode = 0; g_pad_buttons = 0; }
     if (g_keyheld[DIK_K]) { g_input_mode = 1; g_pad_buttons = 0; }
     if (g_keyheld[DIK_J]) g_input_mode = 2;
+    cheat_screenshot();
 }
 
 void input_pad_keys(void)
