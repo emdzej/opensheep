@@ -11,7 +11,7 @@ place; nothing is converted or installed.
 | `binkw32.dll` | The Bink decoder's tables (OpenSheep has its own decoder). |
 | `main.xp`, `sound.xp`, `world00.xp` ... `world09.xp` | The archives: sprites, levels, sounds, per world. |
 | `Data/` | The Bink movies (`Data/Biks`) and the music. |
-| `Misc*` | The front end's pictures, per language. |
+| `Misc*` | The installer's high-score tables and read-me, per language. Not read: OpenSheep starts with the default table the program makes itself. |
 
 The installer, DirectX and the setup files on the disc are not used. All of it together is about
 490 MB.

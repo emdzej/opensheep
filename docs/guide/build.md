@@ -24,6 +24,17 @@ tools/regress.sh | diff - tests/hashes.txt                  # 23 levels' video h
 `regress.sh` plays 23 levels for 1500 frames each with `gasm-run --headless` and prints the hashes
 of their video. A change that shouldn't alter the game keeps them.
 
+## Release bundles
+
+```sh
+tools/package-gasm.sh <version> <platform> "$(tools/fetch-gasm-runner.sh <platform>)" out/
+tools/smoke-gasm-bundle.sh out/opensheep-gasm-<version>-<platform>.zip   # or .tar.gz on Linux
+```
+
+The bundle has the module, the released `gasm-run` and a launcher, and no game data. The smoke test
+checks it without a CD; `OPENSHEEP_SMOKE_CD=<folder or image>` also plays a level and compares the
+hashes. A semver tag (`0.1.0`, no `v`) makes all of them in CI and attaches them to a GitHub release.
+
 ## The site
 
 ```sh

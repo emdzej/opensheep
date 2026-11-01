@@ -17,6 +17,14 @@ looks wrong, check the disassembly; if the original does it, keep it and say so 
 deviations *of the port*. Real undefined behaviour (reads past an array, uninitialised stack words) is
 guarded, with a comment describing what the original does.
 
+## Status
+
+The port is complete: every subsystem and all 35 levels. What remains is verification (a full
+play-through, a side-by-side comparison with the original, the 12 levels outside `regress.sh`), the
+first release and the open points in [PLAN.md](PLAN.md). Work from here is mostly fixing deviations
+found that way: find the original routine, compare, fix the port, keep the hashes or re-baseline them
+for a reason.
+
 ## Hard rules
 
 1. **Never commit original data or anything derived from it.** `cd/`, `re/` (decompiler dumps), `out/`,
@@ -38,6 +46,7 @@ guarded, with a comment describing what the original does.
 | `src/` | The core: app loop (`app.c`, `flow.c` = App_Frame's states), data (`vfs.c` + ISO 9660, `xp.c` archives, `rnc.c`), `exe.c`, sprites and surfaces, fonts, levels (`level.c`, `objects.c`, `play.c`, `lv1.c`..`lv9.c` per world), flock (`sheep.c`), shepherd (`player.c`, demos), moves, HUD, menus (`menu.c`, `pause.c`), results, high scores, saves, credits, cheats/debug keys, sound mixer, Bink (`bink.c`, `movie.c`), input. Backend: `platform_gasm.c` (the only file that includes `gasm.h`). Test host pieces: `vfs_host.c`, `storage_file.c`, `input_none.c` |
 | `tests/` | `play_test.c`, `xp_test.c` (headless, against the real data), `hashes.txt` (`tools/regress.sh`) |
 | `tools/` | `fn.sh <addr>` (a function from `re/all.c`), `dis.py` (disassembler), format decoders (`xp.py`, `spr.py`, `blo.py`, `rnc.py`), `bik.c` and `overview.c` (native), `regress.sh`, `package-gasm.sh` + `gasm-bundle/` (release bundles: launchers per OS) and `smoke-gasm-bundle.sh`, `favicon.py` (the icon, our own drawing), `web-play-test.mjs` (the browser player in headless Chrome against gasm-run's hashes), `fetch-gasm-sdk.sh` / `fetch-gasm-runner.sh`, `ghidra/` scripts |
+| `PLAN.md` | What was built, and what is left |
 | `docs/` | The VitePress site: `guide/`, the browser player `public/play/` (`play.js`, `cd.js`; the gasm runtime vendored by `scripts/vendor-web.sh`), `architecture.md`, `formats.md` |
 
 ## Build and test
@@ -60,7 +69,8 @@ OPENSHEEP_DATA=~/Downloads/Sheep.iso ./build/play_test          # "ok"
 tools/regress.sh 2>/dev/null | diff - tests/hashes.txt && echo SAME
 ```
 
-`regress.sh` runs 23 levels headless for 1500 frames and prints their video hashes. A change that
+`regress.sh` runs 23 levels headless for 1500 frames and prints their video hashes (`OPENSHEEP_DATA` is an
+image or a folder, as for `play_test`). A change that
 should not alter play must keep them; one that does (a newly ported routine) changes them for a
 reason. Check that with screenshots, then re-baseline `tests/hashes.txt` in the same commit.
 
@@ -94,6 +104,22 @@ runner window in unattended runs.
 - `/usr/bin/cc` for one-off native compiles (`cc` may be aliased).
 - Run Python helpers with `-P` from the repo root: a stray `dis.py` in the working directory shadows the
   standard library's.
+- Hooks and move routines are looked up when a level calls them; one without a port logs
+  `... not ported` (`src/levels.c`, `src/moves.c`). Grep a long headless run's log for it after
+  touching a level.
+
+## Releases
+
+Plain semver tags, no `v`: `git tag 0.1.0 && git push origin 0.1.0` runs `.github/workflows/release.yml`
+(the module and the bundles for macOS, Linux and Windows). Locally:
+
+```sh
+tools/package-gasm.sh 0.0.0 macos-universal "$(tools/fetch-gasm-runner.sh macos-universal)" out/
+OPENSHEEP_SMOKE_CD=~/Downloads/Sheep.iso tools/smoke-gasm-bundle.sh out/opensheep-gasm-0.0.0-macos-universal.zip
+```
+
+The smoke test runs without a CD too; with one it plays level 1.1 and checks the hashes. Ask before
+tagging or pushing.
 
 ## The site
 
@@ -101,3 +127,6 @@ runner window in unattended runs.
 docs/scripts/copy-wasm.sh && cd docs && pnpm install && scripts/vendor-web.sh && pnpm build && cd ..
 node tools/web-play-test.mjs cd ~/Downloads/Sheep.iso      # headless Chrome: import, OPFS, folder, image
 ```
+
+`.github/workflows/pages.yml` deploys it from `main`. Screenshots for it are frames from headless
+`gasm-run` (`--screenshot`), saved as JPEG in `docs/public/screenshots/`.

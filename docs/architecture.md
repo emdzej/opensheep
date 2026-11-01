@@ -1,4 +1,4 @@
-# Sheep.exe architecture (working notes)
+# Sheep.exe architecture
 
 Addresses are in `Sheep.exe` (image base `0x400000`). Names follow `tools/ghidra/names.txt`.
 Decompile dump: `re/all.c` (`tools/ghidra/apply.sh`), one function: `tools/fn.sh <addr>`.
@@ -53,9 +53,12 @@ at 6 per frame), then draws once. One tick: player update, sheep update (`0x41ca
 
 `g_world` (0x4b0b60) 0..9, `g_level` (0x4b0f18) 0..5; descriptor table at `0x44adec` indexed
 `world*6 + level`. Level 0 of a world is its world-map screen (shared descriptor 0x4519e0, world 0 =
-the menu level); 1-4 are levels; 5 the bonus game. Descriptor fields used so far: `+0x0c` init
-(after load), `+0x10` tick, `+0x18` object routine, `+0x1c` / `+0x20` draw hooks, `+0x2c` data,
-`+0x30` release.
+the menu level); 1-4 are levels; 5 the bonus game. Descriptor fields (`src/world.h`): `+0x00` name
+(UTF-16), `+0x08` zone rectangles, `+0x0c` init (after load), `+0x10` tick, `+0x18` the shepherd's
+states >= 100, `+0x1c` / `+0x20` draw hooks, `+0x2c` tile animations, `+0x30` release, `+0x44` /
+`+0x48` the sheep's and the shepherd's sprite banks, `+0x4c` the level's move routines, `+0x54` gates.
+The hooks and move routines are exe addresses; the port maps each to its C routine (`src/levels.c`,
+`src/moves.c`), and one without a port logs `... not ported`.
 
 `Level_LoadBLO` (0x4072d0): see `docs/formats.md`. Tiles are 32x24 rgb565, re-packed at load into
 the surface's pixel format (identity in the 16-bit rgb565 mode). Level paths: `World_SetPaths`
@@ -97,4 +100,28 @@ foreground cells (types 1-2 whole via 0x408180, >= 3 through the 32x24 per-type 
   Positions are `float` (x87 code; the port keeps float storage and evaluates like MSVC would).
 - Game RNG: 1024 values from MSVC `rand()` after `srand(0)` (`0x422830`, filled from index 1023
   down), read with a wrapping index (`0x422870`). The index is reset when a demo starts.
-- Difficulty (`0x4a1e93`) 0/1/2 selects `0x4a1ea0` = 5/10/20 (meaning TBD) and a per-level limit (`0x4a2090`).
+- Difficulty (`0x4a1e93`) 0/1/2 selects the sheep to pen (`0x4a1ea0`: 5/10/20; 1 in training) and
+  the time limit (`0x4a2090`): the `.TIM` file's hard limit, twice that on normal, and normal + 18000
+  ticks on easy (0x406c00).
+
+## Where it lives in the port
+
+| Original | `src/` |
+|---|---|
+| WinMain, the main loop, Bink in place of the frame | `app.c`, `movie.c`, `bink.c` |
+| `App_Frame` and its states | `flow.c`, `results.c`, `credits.c`, `hiscore.c` |
+| File layer, archives, RNC, ISO 9660 | `vfs.c`, `xp.c`, `rnc.c` |
+| Level loading, map, tile animations | `level.c`, `world.c`, `levels.c` |
+| Objects, `.POS` / `.ANM`, specials, attractors | `objects.c`, `game.c`, `paths.c` |
+| The level frame, camera, sorted drawing | `play.c`, `render.c` |
+| Shepherd, demos | `player.c` |
+| Flock | `sheep.c` |
+| Move routines, hints | `moves.c`, `hint.c` |
+| Per-world code | `lv1.c` .. `lv7.c`, `lv9.c`, `bonus.c`, `bonus_cars.c` |
+| HUD, texts, fonts | `hud.c`, `font.c` |
+| Menus, pause menu, saves and settings | `menu.c`, `pause.c`, `save.c` |
+| DirectDraw surfaces, sprites | `surface.c`, `sprites.c` |
+| DirectSound | `sound.c` (a mixer in the core) |
+| DirectInput | `input.c`, the backend's devices in `platform_gasm.c` |
+| INI, debug keys | `cheats.c` |
+| MSVC `rand`, the game RNG | `rng.c` |

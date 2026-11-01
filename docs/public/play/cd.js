@@ -14,8 +14,9 @@ import { clearNamespace, opfsFileSystem, persist } from '@emdzej/csfs-opfs';
 export const NAMESPACE = 'opensheep-cd';
 /** Written last: an import without it is incomplete. Hidden, so the game never sees it. */
 const MARKER = '.opensheep-import.json';
-/** What the game reads from the disc: the program (its tables), Bink's tables, the archives, Data and
- *  the front end's Misc* folders. The installer, DirectX and setup files are skipped. */
+/** What the game reads from the disc: the program (its tables), Bink's tables, the archives and Data;
+ *  also the small Misc* folders (the installer's per-language HiScore.tab and ReadMe). The installer,
+ *  DirectX and setup files are skipped. */
 const NEEDED_ROOT = (n) => n === 'SHEEP.EXE' || n === 'BINKW32.DLL' || /\.XP$/.test(n);
 const NEEDED_DIR = (n) => n === 'DATA' || /^MISC/.test(n);
 /** Sheep.exe of the CD (src/exe.c checks the size and CRC-32 b7bcd581). */
