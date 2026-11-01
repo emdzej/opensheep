@@ -77,7 +77,7 @@ void input_map(void)
     if (g_keyheld[DIK_DOWN]) g_key_y = 1;
     cheat_debug_keys();
     cheat_world_keys();
-    /* M / K / J pick mouse, keyboard or pad (TODO: 0x4395a0 re-acquires the devices) */
+    /* M / K / J pick mouse, keyboard or pad (0x4395a0 then acquires the DirectInput devices again; the host's are always there) */
     if (g_keyheld[DIK_M]) { g_input_mode = 0; g_pad_buttons = 0; }
     if (g_keyheld[DIK_K]) { g_input_mode = 1; g_pad_buttons = 0; }
     if (g_keyheld[DIK_J]) g_input_mode = 2;

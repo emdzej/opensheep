@@ -1,6 +1,8 @@
 /* Level 1.1 in play, headless: the sheep stay put with no input (no trigger fires on its own), a
    sheep put on the horsebox ramp is penned, and the level clock ends the level. */
 #include "hud.h"
+#include "sprites.h"
+#include "font.h"
 #include "exe.h"
 #include "level.h"
 #include "moves.h"
@@ -15,6 +17,7 @@
 #include "world.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static int fails;
 #define CHECK(c, ...) do { if (!(c)) { printf("FAIL %s:%d: ", __FILE__, __LINE__); printf(__VA_ARGS__); printf("\n"); fails++; } } while (0)
@@ -141,6 +144,20 @@ int main(void)
     wfmt(buf, 16, exe_wtext(0x44cb48, fmt, 16), 3, 7);
     CHECK(buf[0] == '$' && buf[1] == '0' && buf[2] == '3' && buf[3] == ':' && buf[5] == '7' && !buf[6],
           "format");
+
+    /* languages 8 and up: the panels' texts in Ariel12, '$' red */
+    CHECK(fonts_load(), "fonts");
+    memset(px, 0, sizeof px);
+    sprite_target(&mfb);
+    int lang = g_lang;
+    g_lang = 8;
+    uint16_t red[4] = { '$', '1', '2', 0 };
+    text_draw(red, 10, 10);
+    g_lang = lang;
+    long ink = 0, other = 0;
+    for (int i = 0; i < 640 * 480; i++)
+        if (px[i]) { if ((px[i] & 0x7ff) == 0) ink++; else if (px[i] >> 11 == 0) other++; }
+    CHECK(ink > 20 && other == 0, "Ariel12 text %ld red, %ld other", ink, other);
 
     /* the menu pages' items are filled by the exe's initialisers (exe_run at load): the main page's
        first label has a string, its terminator is at x -1 */

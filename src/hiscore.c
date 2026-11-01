@@ -163,7 +163,7 @@ void hiscores_start(void)
         memcpy(dst, name, sizeof name);
     }
     menu_name_start();
-    /* TODO: 0x439280, 0x439170: the input devices acquired again */
+    /* (0x439280, 0x439170 acquire the DirectInput devices again; nothing to do on the host) */
 }
 
 static void text_s(uint32_t fmt_va, int strid, int x, int y)

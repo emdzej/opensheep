@@ -1,4 +1,5 @@
 #include "hud.h"
+#include "font.h"
 #include "exe.h"
 #include "game.h"
 #include "moves.h"
@@ -176,7 +177,17 @@ int wfmt(uint16_t *out, size_t cap, const uint16_t *fmt, ...)
 
 void text_draw(const uint16_t *s, int x, int y)
 {
-    /* 0x40bdb0. TODO: languages 8 and up draw with the .fnt font (0x404880, 0x436eb0) instead */
+    /* 0x40bdb0. Languages 8 and up draw with the Ariel12 font (0x4b0fa8) instead, through the queue
+       0x405250 / 0x405430 drains at once: a leading space dropped, then a leading '£' yellow or '$'
+       red (the rest of the string as it is) */
+    if (g_lang >= 8) {
+        uint32_t rgb = 0x7fffff00;
+        if (*s == ' ') s++;
+        if (*s == 0xa3) s++;
+        else if (*s == '$') { rgb = 0x7fff0000; s++; }
+        font_draw(x, y, s, 1, rgb);
+        return;
+    }
     int bank = 0;
     for (; *s; s++) {
         if (*s == 0xa3) bank = 0;
