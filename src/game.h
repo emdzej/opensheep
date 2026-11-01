@@ -150,9 +150,30 @@ extern int g_saved;             /* 0x4ae084: sheep penned */
 extern int g_needed;            /* 0x4a1ea0: sheep to pen (5 / 10 / 20 by difficulty) */
 extern int g_end;               /* 0x4a4100: level end reason (1 won, 6 demo over, 7 bonus) */
 extern int g_on_ice;            /* 0x4b9828 */
-extern int g_char;              /* 0x4a1e91: 0 Bo Peep, 1 Adam, 2 Motley, 3 Shep */
 extern int g_breed;             /* 0x4a19e0: 0 Pastoral, 1 Factoral, 2 Longwool, 3 Neogenetic */
-extern int8_t g_theme;          /* 0x4a1e89 */
+
+/* 0x4a1e80: the game in progress, 0x20 bytes, copied whole to and from the save slots (+0x24 of a
+   Game%02d.sav) and kept at 0x4a2070 while a level runs. */
+typedef struct {
+    int32_t score;              /* +0x00 0x4a1e80 */
+    int32_t u84;                /* +0x04 0x4a1e84 */
+    int8_t u88;                 /* +0x08 0x4a1e88 */
+    int8_t world;               /* +0x09 0x4a1e89: the world being played */
+    uint8_t levels;             /* +0x0a 0x4a1e8a: its levels done (0x44b198 bits) */
+    uint8_t breeds;             /* +0x0b 0x4a1e8b: breeds played (0x44b198 bits) */
+    int8_t flock[4];            /* +0x0c 0x4a1e8c: sheep per breed, carried between levels */
+    uint8_t bonus;              /* +0x10 0x4a1e90: bonus levels' flags (0x44b194 per level) */
+    int8_t chr;                 /* +0x11 0x4a1e91: 0 Bo Peep, 1 Adam, 2 Motley, 3 Shep */
+    int8_t breed;               /* +0x12 0x4a1e92 */
+    int8_t difficulty;          /* +0x13 0x4a1e93: 0 easy .. 2 hard */
+    uint8_t worlds[12];         /* +0x14 0x4a1e94: per world, the levels won */
+} Progress;
+extern Progress g_prog;
+#define g_char (g_prog.chr)
+#define g_theme (g_prog.world)
+#define g_difficulty (g_prog.difficulty)
+#define g_flock_size (g_prog.flock)
+#define g_bonus (g_prog.bonus)
 extern int g_effect_count;      /* 0x4adebc */
 extern int g_scroll_reset;      /* 0x4b0f30 */
 extern int g_level_over;        /* 0x4b0f2c: the end-of-level sequence has started */

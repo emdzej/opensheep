@@ -16,13 +16,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-int g_difficulty;
-int8_t g_flock_size[4];
 AnimObj *g_cam_target;
 int g_clock, g_time_limit;          /* 0x4b0f20, 0x4a2090 */
 int g_paused;                       /* 0x4b0f3c */
 int8_t g_frozen;                    /* 0x4b0f24: the cheat that stops the actors */
-static int tim_hard, tim_normal, tim_easy;   /* 0x4a1eac, 0x4a28c8, 0x4a20b0 */
+int g_tim_hard, g_tim_normal, g_tim_easy;   /* 0x4a1eac, 0x4a28c8, 0x4a20b0 */
 int g_flock_n, g_flock_sx, g_flock_sy;
 static float cam_tx, cam_ty;        /* 0x4a3ea0, 0x4a4210 */
 static float cam_vx, cam_vy;        /* 0x4ae054, 0x4a40f8 */
@@ -71,26 +69,26 @@ static float b_float(int i, int k)
     return (float)v;
 }
 
-static void level_load_tim(void)
+void level_load_tim(int world, int level)
 {
     /* 0x406c00: the time limit in ticks (+8 of the .TIM file; 7200 without one) */
-    tim_hard = 0x1c20;
+    g_tim_hard = 0x1c20;
     size_t n;
-    uint8_t *f = file_load(world_level_path(".tim"), &n);
+    uint8_t *f = file_load(world_path_of(world, level, ".tim"), &n);
     if (f) {
-        if (n >= 12) memcpy(&tim_hard, f + 8, 4);
+        if (n >= 12) memcpy(&g_tim_hard, f + 8, 4);
         free(f);
     }
-    tim_normal = tim_hard * 2;
-    tim_easy = tim_normal + 18000;
+    g_tim_normal = g_tim_hard * 2;
+    g_tim_easy = g_tim_normal + 18000;
 }
 
 void level_start(void)
 {
     static const int needed[3] = { 5, 10, 0x14 };
     g_needed = needed[g_difficulty < 0 ? 0 : g_difficulty > 2 ? 2 : g_difficulty];
-    level_load_tim();
-    g_time_limit = g_difficulty == 0 ? tim_easy : g_difficulty == 1 ? tim_normal : tim_hard;
+    level_load_tim(g_world, g_level);
+    g_time_limit = g_difficulty == 0 ? g_tim_easy : g_difficulty == 1 ? g_tim_normal : g_tim_hard;
     if (g_world == 9) g_needed = 1;
     if (g_demo) g_rng_index = 0;
     g_nsheep = g_flock_size[g_breed & 3];

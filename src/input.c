@@ -7,6 +7,7 @@
 uint8_t g_keydown[256];
 int8_t g_keyheld[256];
 int g_last_key;
+uint8_t g_mouse_button;
 static int pad_held;                    /* 0x4ae0bc: pad button 3 (bit 2), ticks held */
 
 enum { KEY_RUN = 0x44ad4c, KEY_CREEP = 0x44ad50, KEY_ACTION = 0x44ad58 };   /* DIK codes, configurable */
@@ -94,4 +95,9 @@ void input_pad_keys(void)
     } else if ((g_pad_buttons & 1) == 0) {
         latch[4] = 0;
     }
+}
+
+void pad_read(void)
+{
+    /* 0x422760 reads the DirectInput joystick: the stick's x / y and buttons 1-4 as bits 0-3 */
 }

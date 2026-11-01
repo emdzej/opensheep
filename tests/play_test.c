@@ -58,6 +58,14 @@ int main(void)
     CHECK(buf[0] == '$' && buf[1] == '0' && buf[2] == '3' && buf[3] == ':' && buf[5] == '7' && !buf[6],
           "format");
 
+    /* the menu pages' items are filled by the exe's initialisers (exe_run at load): the main page's
+       first label has a string, its terminator is at x -1 */
+    uint32_t items = exe_u32(0x4517f0);
+    CHECK(exe_u16(items + 8) != 0 && str_get((int16_t)exe_u16(items + 8))[0] != 0, "menu label");
+    uint32_t it = items;
+    while (exe_s32(it) != -1 && it < items + 0x18 * 32) it += 0x18;
+    CHECK(exe_s32(it) == -1, "menu page 0 has no end");
+
     printf("%s\n", fails ? "FAILED" : "ok");
     return fails ? 1 : 0;
 }

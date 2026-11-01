@@ -30,3 +30,7 @@ bool world_select(int world, int level);
 const char *world_level_name(void);
 /* "Data\World01\W01Level01\W01Level01" + ext (0x401000). */
 const char *world_level_path(const char *ext);
+/* The same path for another world / level ("" if there is none). */
+const char *world_path_of(int world, int level, const char *ext);
+/* Its descriptor (0 if none). */
+uint32_t world_desc_of(int world, int level);

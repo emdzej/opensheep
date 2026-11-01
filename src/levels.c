@@ -21,7 +21,7 @@ static const struct {
     { lv1_actor, NULL, lv1_move }, { lv2_actor, NULL, lv2_move }, { lv3_actor, lv3_call, lv3_move },
     { lv4_actor, lv4_call, lv4_move }, { lv5_actor, NULL, lv5_move }, { lv6_actor, NULL, lv6_move },
     { lv7_actor, lv7_call, lv7_move }, { lv9_actor, NULL, lv9_move }, { bonus_actor, bonus_call, bonus_move },
-    { cars_actor, cars_call, no_move },
+    { cars_actor, cars_call, no_move }, { menu_actor, menu_call, menu_move },
 };
 
 void level_hook(uint32_t off)

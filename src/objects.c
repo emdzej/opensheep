@@ -1,4 +1,5 @@
 #include "objects.h"
+#include "game.h"
 #include "moves.h"
 #include "level.h"
 #include "render.h"
@@ -20,7 +21,6 @@ int g_static_hi, g_anim_hi;
 int g_obj_by_id[MAX_OBJ_ID];
 int g_loading;
 int g_static_count, g_anim_count;       /* 0x49f890, 0x49f99c */
-int g_4a1e89;                           /* 0x4a1e89: checked with level 5 by anim_set_frame (TBD) */
 
 static uint8_t *anm[4];                 /* 0x49f880 player, 0x49f884 sheep, 0x49f888 common, 0x49f88c level */
 static size_t anm_size[4];
@@ -191,7 +191,7 @@ void anim_set_frame(AnimObj *a)
     int d = a->dir;
     if (d < 9) a->rec.flip = 0;
     else { a->rec.flip = 1; d = 16 - d; }
-    if (g_4a1e89 == 5 && g_level == 5 && (a->anim == 0x4d || a->anim == 0x66)) a->rec.flip |= a->mirror;
+    if (g_theme == 5 && g_level == 5 && (a->anim == 0x4d || a->anim == 0x66)) a->rec.flip |= a->mirror;
     int bank = 0;
     uint32_t frame = 0;
     const uint8_t *end = anm[f] + anm_size[f];

@@ -49,3 +49,17 @@ const char *world_level_path(const char *ext)
 }
 
 uint32_t desc_u32(uint32_t off) { return g_desc ? exe_u32(g_desc + off) : 0; }
+
+const char *world_path_of(int world, int level, const char *ext)
+{
+    /* World_SetPaths 0x4033a0 + Level_Path 0x401000 for a level other than the selected one */
+    static char path[256];
+    char name[64];
+    uint32_t d = descriptor(world, level);
+    if (!d) return "";
+    exe_wstr(exe_u32(d), name, sizeof name);
+    snprintf(path, sizeof path, "Data\\World0%c\\%s\\%s%s", level == 0 ? '0' : '0' + world, name, name, ext);
+    return path;
+}
+
+uint32_t world_desc_of(int world, int level) { return descriptor(world, level); }

@@ -13,6 +13,9 @@ void strings_free(void);
 /* 0x423760: string n (an empty string where the original would return NULL). */
 const uint16_t *str_get(int n);
 
+/* The same string, writable (the menus write digits into some); NULL if there is none. */
+uint16_t *str_mut(int n);
+
 /* swprintf 0x43d130, the subset the game uses: %d with a 0 flag and a width, %s of a UTF-16 string. */
 int wfmt(uint16_t *out, size_t cap, const uint16_t *fmt, ...);
 /* A UTF-16 string from the exe (the format strings), copied to dst. */

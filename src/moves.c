@@ -14,7 +14,6 @@
 #include <string.h>
 
 int g_pickups, g_score_flash, g_timer_on, g_hud_style;
-uint8_t g_bonus;
 int g_hint_owner, g_hint_shown, g_hint_x, g_hint_y, g_hint;
 int g_switch_wait[32];
 int g_carry_time;

@@ -26,8 +26,8 @@ Sheep g_sheep[MAX_SHEEP];
 int g_nsheep;
 
 int g_input_mode, g_demo, g_run, g_creep, g_action, g_mouse_dx, g_mouse_dy;
-int g_saved, g_needed, g_end, g_on_ice, g_char, g_breed, g_effect_count, g_scroll_reset, g_level_over;
-int8_t g_theme;
+int g_saved, g_needed, g_end, g_on_ice, g_breed, g_effect_count, g_scroll_reset, g_level_over;
+Progress g_prog;                 /* 0x4a1e80 */
 
 /* The tuning variables are initialised data in the exe; the files overwrite them, and a value a file
    leaves out keeps whatever the previous level set. */

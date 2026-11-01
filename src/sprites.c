@@ -90,6 +90,7 @@ bool sprite_frame_ids(int bank, int frame, int *group, int *index)
 }
 
 void sprite_target(Framebuffer *fb) { target = fb; }
+Framebuffer *sprite_get_target(void) { return target; }
 
 void sprite_clip(int x0, int y0, int x1, int y1)
 {

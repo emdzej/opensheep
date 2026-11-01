@@ -12,6 +12,7 @@ enum {
 
 extern uint8_t g_keydown[256];          /* 0x4a1d6c: non-zero while down */
 extern int8_t g_keyheld[256];           /* 0x4a4108 */
+extern uint8_t g_mouse_button;          /* 0x4bc91c: the left button is down */
 extern int g_last_key;                  /* 0x4a40e4: the highest key down this tick */
 
 /* Fill g_keydown from the backend (keys.h codes), with is_down(key) = plat_key_down. */
@@ -20,5 +21,7 @@ void input_read(int (*is_down)(int key));
 void input_keys_tick(void);
 /* 0x408ca0 (keyboard part): the shepherd's controls from the configured keys (0x44ad4c..). */
 void input_map(void);
+/* 0x422760: the pad (g_pad_x / g_pad_y, g_pad_buttons). TODO: pads; for now they keep their values. */
+void pad_read(void);
 /* 0x410330: the pad's stick and buttons as presses of the arrow keys and space (the bonus races). */
 void input_pad_keys(void);

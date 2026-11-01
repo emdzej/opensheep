@@ -24,15 +24,26 @@ bool exe_loaded(void);
 /* Mapped image [EXE_IMAGE_BASE, EXE_IMAGE_BASE + SizeOfImage); uninitialised data (.bss) reads as 0. */
 bool exe_contains(uint32_t va, size_t n);
 const void *exe_ptr(uint32_t va);                 /* NULL outside the image */
+/* The same bytes, writable: the few tables the original changes in place (the menu pages' items and
+   their text buffers). Aborts outside the image. */
+void *exe_mut(uint32_t va, size_t n);
 void exe_read(void *dst, uint32_t va, size_t n);  /* aborts outside the image */
 uint32_t exe_u32(uint32_t va);
 int32_t exe_s32(uint32_t va);
 uint16_t exe_u16(uint32_t va);
 uint8_t exe_u8(uint32_t va);
 int8_t exe_s8(uint32_t va);
+int16_t exe_s16(uint32_t va);
+float exe_f32(uint32_t va);
 const char *exe_str(uint32_t va);                 /* NUL-terminated string inside the image ("" if none) */
 /* UTF-16LE string at va, narrowed to ASCII ('?' for anything else) into dst; returns dst. */
 char *exe_wstr(uint32_t va, char *dst, size_t cap);
+
+/* Runs the routine at va, which may only move constants and data between registers and fixed
+   addresses (mov, xor, or/add/sub with an 8-bit immediate, push / pop, jmp, ret): the compiler's
+   initialisers of the tables that are not constant data in the file (the menu pages' items). false
+   if it meets anything else, after the writes so far. */
+bool exe_run(uint32_t va);
 
 /* Table loaders: each generated table module registers one with EXE_LOADER(fn); exe_load() calls them
    all (in registration order) after the image is mapped. */

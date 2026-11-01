@@ -118,6 +118,11 @@ const uint16_t *str_get(int n)
     return strings[n];
 }
 
+uint16_t *str_mut(int n)
+{
+    return n < 0 || n >= nstrings ? NULL : strings[n];
+}
+
 const uint16_t *exe_wtext(uint32_t va, uint16_t *dst, size_t cap)
 {
     size_t i = 0;

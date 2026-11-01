@@ -3,6 +3,8 @@
    PageDown for the previous / next level; G: sprite gallery of the loaded banks, [ ] pick the bank). The front end and game states replace it as they are ported. */
 #include "app.h"
 #include "exe.h"
+#include "flow.h"
+#include "font.h"
 #include "hud.h"
 #include "xp.h"
 #include "input.h"
@@ -23,7 +25,7 @@
 #include <string.h>
 
 static int view_x, view_y;
-static bool gallery, viewer, trace;
+static bool gallery, viewer, trace, front_end;
 static int ticks;
 static int gallery_bank = SPR_BANK_LEVEL;
 
@@ -79,8 +81,9 @@ static void step_level(int dir)
 bool app_init(int argc, char **argv)
 {
     int world = 0, level = 0;
+    front_end = true;
     for (int i = 1; i < argc; i++)
-        if (!strcmp(argv[i], "--level") && i + 1 < argc) sscanf(argv[++i], "%d.%d", &world, &level);
+        if (!strcmp(argv[i], "--level") && i + 1 < argc) sscanf(argv[++i], "%d.%d", &world, &level), front_end = false;
         else if (!strcmp(argv[i], "--view")) viewer = true;
         else if (!strcmp(argv[i], "--trace")) trace = true;
     rng_init();                         /* 0x408930, the start-up, fills the table once */
@@ -91,6 +94,11 @@ bool app_init(int argc, char **argv)
     /* 0x438350: main.xp is mounted and the texts loaded once, at start-up */
     xp_mount("main.xp");
     if (!strings_load()) fprintf(stderr, "no GameStrings\n");
+    if (!fonts_load()) fprintf(stderr, "no fonts\n");
+    if (front_end && !viewer) {
+        flow_start(APP_START);
+        return true;
+    }
     if (!load(world, level) && !load(0, 0)) { plat_error("OpenSheep", "cannot load the level"); return false; }
     return true;
 }
@@ -117,6 +125,17 @@ static int key_down(int key) { return plat_key_down(key); }
 bool app_frame(void)
 {
     if (!plat_poll()) return false;
+    if (front_end && !viewer) {
+        input_read(key_down);
+        int mx, my, dx, dy;
+        uint32_t buttons = 0;
+        plat_mouse(&mx, &my, &dx, &dy, &buttons);
+        g_mouse_button = buttons & 1;
+        Framebuffer *fb = plat_fb();
+        bool on = flow_frame(fb);
+        plat_present();
+        return on;
+    }
     int keys[16], n = plat_key_presses(keys, 16);
     for (int i = 0; i < n; i++) {
         if (keys[i] == KEY_PAGEDOWN) step_level(1);

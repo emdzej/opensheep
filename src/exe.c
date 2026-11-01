@@ -103,6 +103,15 @@ bool exe_contains(uint32_t va, size_t n)
 
 const void *exe_ptr(uint32_t va) { return exe_contains(va, 1) ? image + (va - EXE_IMAGE_BASE) : NULL; }
 
+void *exe_mut(uint32_t va, size_t n)
+{
+    if (!exe_contains(va, n)) {
+        fprintf(stderr, "exe_mut: 0x%08x+%zu outside the Sheep.exe image\n", va, n);
+        abort();
+    }
+    return image + (va - EXE_IMAGE_BASE);
+}
+
 void exe_read(void *dst, uint32_t va, size_t n)
 {
     if (!exe_contains(va, n)) {
@@ -118,6 +127,8 @@ int32_t exe_s32(uint32_t va) { return (int32_t)exe_u32(va); }
 uint16_t exe_u16(uint32_t va) { uint8_t b[2]; exe_read(b, va, 2); return (uint16_t)rd16(b); }
 uint8_t exe_u8(uint32_t va) { uint8_t b; exe_read(&b, va, 1); return b; }
 int8_t exe_s8(uint32_t va) { return (int8_t)exe_u8(va); }
+int16_t exe_s16(uint32_t va) { return (int16_t)exe_u16(va); }
+float exe_f32(uint32_t va) { uint32_t u = exe_u32(va); float f; memcpy(&f, &u, 4); return f; }
 
 const char *exe_str(uint32_t va)
 {
@@ -137,4 +148,106 @@ char *exe_wstr(uint32_t va, char *dst, size_t cap)
     }
     if (cap) dst[i] = 0;
     return dst;
+}
+
+/* ---------------------------------------------------------------- static initialisers */
+
+/* The registers of exe_run; 8-bit registers 4-7 are the high bytes of 0-3. */
+static uint32_t reg8(const uint32_t *r, int n) { return n < 4 ? r[n] & 0xff : (r[n - 4] >> 8) & 0xff; }
+static void set_reg8(uint32_t *r, int n, uint32_t v)
+{
+    if (n < 4) r[n] = (r[n] & ~0xffu) | (v & 0xff);
+    else r[n - 4] = (r[n - 4] & ~0xff00u) | (v & 0xff) << 8;
+}
+
+static void store(uint32_t va, uint32_t v, int size) { memcpy(exe_mut(va, (size_t)size), &v, (size_t)size); }
+static uint32_t load(uint32_t va, int size)
+{
+    uint32_t v = 0;
+    exe_read(&v, va, (size_t)size);
+    return v;
+}
+
+bool exe_run(uint32_t va)
+{
+    uint32_t r[8] = { 0 }, stack[16];
+    int sp = 0;
+    for (int steps = 0; steps < 10000; steps++) {
+        int size = 4;
+        uint8_t op = exe_u8(va++);
+        if (op == 0x66) {
+            size = 2;
+            op = exe_u8(va++);
+        }
+        uint32_t mask = size == 4 ? 0xffffffffu : 0xffffu;
+        if (op == 0x90) continue;
+        if (op == 0xc3) return true;
+        if (op == 0xe9) { va += exe_u32(va) + 4; continue; }
+        if (op == 0xeb) { va += (uint32_t)(int32_t)exe_s8(va) + 1; continue; }
+        if (op >= 0x50 && op <= 0x57) { if (sp == 16) break; stack[sp++] = r[op - 0x50]; continue; }
+        if (op >= 0x58 && op <= 0x5f) { if (sp == 0) break; r[op - 0x58] = stack[--sp]; continue; }
+        if (op >= 0xb8 && op <= 0xbf) {
+            uint32_t v = size == 4 ? exe_u32(va) : exe_u16(va);
+            va += (uint32_t)size;
+            r[op - 0xb8] = (r[op - 0xb8] & ~mask) | v;
+            continue;
+        }
+        if (op >= 0xb0 && op <= 0xb7) { set_reg8(r, op - 0xb0, exe_u8(va++)); continue; }
+        if (op == 0xa0 || op == 0xa1) {
+            int n = op == 0xa0 ? 1 : size;
+            uint32_t v = load(exe_u32(va), n);
+            va += 4;
+            if (n == 1) set_reg8(r, 0, v);
+            else r[0] = (r[0] & ~mask) | v;
+            continue;
+        }
+        if (op == 0xa2 || op == 0xa3) {
+            store(exe_u32(va), op == 0xa2 ? r[0] & 0xff : r[0] & mask, op == 0xa2 ? 1 : size);
+            va += 4;
+            continue;
+        }
+        uint8_t m = exe_u8(va++);
+        int mod = m >> 6, rg = (m >> 3) & 7, rm = m & 7;
+        bool mem = mod == 0 && rm == 5;
+        if (!mem && mod != 3) break;            /* only [disp32] and registers */
+        uint32_t addr = 0;
+        if (mem) { addr = exe_u32(va); va += 4; }
+        switch (op) {
+        case 0x88: if (mem) store(addr, reg8(r, rg), 1); else set_reg8(r, rm, reg8(r, rg)); continue;
+        case 0x8a: set_reg8(r, rg, mem ? load(addr, 1) : reg8(r, rm)); continue;
+        case 0x89:
+            if (mem) store(addr, r[rg] & mask, size);
+            else r[rm] = (r[rm] & ~mask) | (r[rg] & mask);
+            continue;
+        case 0x8b: r[rg] = (r[rg] & ~mask) | ((mem ? load(addr, size) : r[rm]) & mask); continue;
+        case 0xc6: if (rg) break; if (mem) store(addr, exe_u8(va), 1); else set_reg8(r, rm, exe_u8(va)); va++; continue;
+        case 0xc7: {
+            if (rg) break;
+            uint32_t v = size == 4 ? exe_u32(va) : exe_u16(va);
+            va += (uint32_t)size;
+            if (mem) store(addr, v, size);
+            else r[rm] = (r[rm] & ~mask) | v;
+            continue;
+        }
+        case 0x31: case 0x33:
+            if (mem || rm != rg) break;         /* only xor r, r */
+            r[rm] &= ~mask;
+            continue;
+        case 0x83: {
+            if (mem) break;
+            uint32_t v = (uint32_t)(int32_t)exe_s8(va++), x = r[rm];
+            if (rg == 0) x += v;
+            else if (rg == 1) x |= v;
+            else if (rg == 4) x &= v;
+            else if (rg == 5) x -= v;
+            else if (rg == 6) x ^= v;
+            else break;
+            r[rm] = (r[rm] & ~mask) | (x & mask);
+            continue;
+        }
+        }
+        break;
+    }
+    fprintf(stderr, "exe_run: unsupported code at 0x%08x\n", va);
+    return false;
 }
