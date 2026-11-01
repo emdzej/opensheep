@@ -990,7 +990,9 @@ void move_20(AnimObj *a)
     double s = sin(acos(vdot(u, vh)));
     double l = vlen(vx, vy);
     double qx = (double)g_player.x + l * s * n[0], qy = (double)g_player.y + l * s * n[1];
-    if (qx <= x0) { qx = x0; qy = y0; }
+    /* fcomp + test ah, 0x41 is also taken unordered: a NaN point (acos of a dot just past 1, the
+       shepherd on the line) is the path's first point */
+    if (!(qx > x0)) { qx = x0; qy = y0; }
     if (x1 <= qx) { qx = x1; qy = y1; }
     a->x = ftol(qx);
     a->y = ftol(qy);
