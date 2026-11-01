@@ -49,6 +49,19 @@ static int angle_of(int dx, int dy)
 
 static int sector(const Car *c) { return c->heading >> 7; }
 
+static void char_bank_load(int bank, uint32_t name, int at, uint32_t codes)
+{
+    /* the shepherd's car: the name's two letters at `at` replaced by the character's code */
+    char path[64];
+    snprintf(path, sizeof path, "%s", exe_str(name));
+    uint32_t code = exe_u32(codes + 2 * (uint32_t)(g_char & 3));
+    if ((int)strlen(path) > at + 1) {
+        path[at] = (char)code;
+        path[at + 1] = (char)(code >> 8);
+    }
+    sprite_bank_load(bank, path);
+}
+
 static void car_keys(Car *c)
 {
     /* 0x429ef0 (the computer: 0x42a750) */
@@ -192,13 +205,14 @@ static void car_skid(Car *c)
     if (r < ftol((double)side)) anim_new(ftol((double)c->x), ftol((double)c->y), 0xc, 8, 4);
 }
 
-static void car_bump(Car *c)
+static void car_bump(Car *c, int n, bool dodgem)
 {
-    /* 0x42a1c0: within 48 px (Manhattan) of another car: pushed out to 48.5 px; head-on both lose
-       a quarter of their speed and spin; the two swap momentum (sound 4-7) */
-    for (int k = 0; k < 10; k++) {
+    /* 0x42a1c0 (6.5: 0x424f90, over the cars in play, the shepherd's hitting 1.5 times as hard
+       and taking 0.75): within 48 px (Manhattan) of another car: pushed out to 48.5 px; head-on
+       both lose a quarter of their speed and spin; the two swap momentum (sound 4-7) */
+    for (int k = 0; k < n; k++) {
         Car *o = &cars[k];
-        if (o == c || o->state == 0) continue;
+        if (o == c || (dodgem ? o->state != 2 : o->state == 0)) continue;
         int dy = ftol((double)c->y - (double)o->y);
         int dx = ftol((double)c->x - (double)o->x);
         if (iabs(dx) + iabs(dy) >= 0x30) continue;
@@ -216,9 +230,12 @@ static void car_bump(Car *c)
             c->spin = -0x32;
             o->spin = -0x32;
         }
+        float take = 1.0f, give = 1.0f;
+        if (dodgem && c == &cars[0]) take = 0.75f, give = 1.5f;
+        if (dodgem && o == &cars[0]) take = 1.5f, give = 0.75f;
         for (int i = 0; i < 0x20; i++) {
-            float t = c->vel[i];
-            c->vel[i] = o->vel[i];
+            float t = (float)((double)give * (double)c->vel[i]);
+            c->vel[i] = (float)((double)take * (double)o->vel[i]);
             o->vel[i] = t;
         }
         sound_play_at(&g_anim[k], (int)(rng_next() & 3) + 4, 0, 0);
@@ -293,22 +310,22 @@ static void car_laps(Car *c, int i)
     if (++c->next_cp > (int)exe_u32(0x451dd8)) c->next_cp = 0;
 }
 
-static int progress_cp(const Car *c)
+static int progress_cp(const Car *c, int ncp)
 {
-    return c->next_cp == 0 ? (int)exe_u32(0x451dd8) + 1 : c->next_cp;
+    return c->next_cp == 0 ? ncp + 1 : c->next_cp;
 }
 
-static void car_ranks(void)
+static void car_ranks(int n, int ncp)
 {
-    /* 0x42a630: an exchange sort by laps, checkpoint, then the ticks since it */
+    /* 0x42a630 (6.5: 0x425420): an exchange sort by laps, checkpoint, then the ticks since it */
     Car *p[10];
-    for (int i = 0; i < 10; i++) p[i] = &cars[i];
-    for (int i = 0; i < 9; i++) {
-        for (int j = i + 1; j < 10; j++) {
+    for (int i = 0; i < n; i++) p[i] = &cars[i];
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = i + 1; j < n; j++) {
             Car *a = p[i], *b = p[j];
             bool swap;
             if (a->laps != b->laps) swap = a->laps < b->laps;
-            else if (progress_cp(a) != progress_cp(b)) swap = progress_cp(a) < progress_cp(b);
+            else if (progress_cp(a, ncp) != progress_cp(b, ncp)) swap = progress_cp(a, ncp) < progress_cp(b, ncp);
             else swap = a->timer <= b->timer;
             if (swap) {
                 p[j] = a;
@@ -316,7 +333,7 @@ static void car_ranks(void)
             }
         }
     }
-    for (int i = 0; i < 10; i++) p[i]->rank = i;
+    for (int i = 0; i < n; i++) p[i]->rank = i;
 }
 
 static void cars_tick(void)
@@ -331,13 +348,13 @@ static void cars_tick(void)
             car_bins(c);
             car_move(c);
             car_skid(c);
-            car_bump(c);
+            car_bump(c, 10, false);
             car_map(c, i);
             car_laps(c, i);
         }
         if (c->state == 2 && --c->timer < 1) c->state = 1;
     }
-    car_ranks();
+    car_ranks(10, (int)exe_u32(0x451dd8));
 }
 
 /* ================================================================ 5.5: the kart race */
@@ -347,14 +364,7 @@ static void lv55_init(void)
     /* 0x429c00: the shepherd's kart (sprites by character), ten karts on the grid two seconds
        apart (the shepherd's swapped into the fifth place), the four lanes' waypoints from paths
        1-4 */
-    char path[64];
-    snprintf(path, sizeof path, "%s", exe_str(0x451e58));
-    int ch = g_char & 3;
-    if (strlen(path) > 0x17) {
-        path[0x16] = (char)exe_u32(0x451e80 + 2 * (uint32_t)ch);
-        path[0x17] = (char)(exe_u32(0x451e80 + 2 * (uint32_t)ch) >> 8);
-    }
-    sprite_bank_load(0xca, path);
+    char_bank_load(0xca, 0x451e58, 0x16, 0x451e80);
     int y = 0x500;
     for (int i = 0; i < 10; i++) {
         Sheep *s = &g_sheep[i];
@@ -469,12 +479,224 @@ static void lv55_actor(int32_t *a)
     }
 }
 
+/* ================================================================ 6.5: the dodgems */
+
+/* Eight dodgems on a raft; bumped into the water (specials 0-3) a car sinks: the shepherd's comes
+   back for a life, another is out for 1000 points; the last one out ends it. */
+static int wp_count65;            /* 0x65fe8c */
+static int left65;                /* 0x65fe90 */
+
+static void ai65(Car *c)
+{
+    /* 0x425570: 0x42a750 with 150 px and the lane that point is in taken */
+    c->keys = 0;
+    if (c->off != 0) return;
+    int k = c->wp & 63;
+    int a = angle_of(wp_x[k][c->lane & 3] - ftol((double)c->x), wp_y[k][c->lane & 3] - ftol((double)c->y));
+    int h = c->heading;
+    int diff = a - h + 0x1000;
+    if ((iabs(diff) & 0xfff) > 8) c->keys |= diff & 0x800 ? 1 : 2;
+    int iy = ftol((double)c->y), ix = ftol((double)c->x);
+    int lane = -1;
+    for (int l = 0; l < 4; l++)
+        if (iabs(iy - wp_y[k][l]) + iabs(ix - wp_x[k][l]) < 0x96) lane = l;
+    if (lane != -1) {
+        c->lane = lane;
+        if (++c->wp >= wp_count65) c->wp = 0;
+    }
+    c->keys |= 4;
+    if (c->timer > 500) {
+        c->vel[((h >> 7) - 0x10) & 0x1f] = 2.0f;
+        c->timer = 0;
+    }
+}
+
+static void map65(Car *c, int i)
+{
+    /* 0x425290: water (specials 0 / 1 near, 2 / 3 far: sinking to 240 / 960 px below, sound 8),
+       a spin (0x14), the raft's edge bounces */
+    Sheep *s = &g_sheep[i];
+    AnimObj *o = &g_anim[i];
+    s->u18 = -1;
+    sheep_collide(ftol((double)c->x), ftol((double)c->y), s->d, 0);
+    switch (s->u18) {
+    case 0: case 1:
+        o->d[0x17] = 0xf0;
+        c->state = 3;
+        sound_play_at(&g_anim[s->slot], 8, 0, 0);
+        break;
+    case 2: case 3:
+        o->d[0x17] = 0x3c0;
+        c->state = 3;
+        sound_play_at(&g_anim[s->slot], 8, 0, 0);
+        break;
+    case 0x14:
+        cars[s->slot % 10].spin = (crt_rand() & 0xff) - 0x80;
+        s->u18 = -1;
+        break;
+    }
+    if (s->hit == 2) {
+        c->x = s->x;
+        c->y = s->y;
+        car_wall(c, s->push_dir);
+        sound_play_at(&g_anim[s->slot], (int)(rng_next() & 3), 0, 0);
+    }
+}
+
+static void cars65_tick(void)
+{
+    /* 0x4256b0 */
+    for (int i = 0; i < 8; i++) {
+        Car *c = &cars[i];
+        if (c->state == 2) {
+            if (c->control == 0) car_keys(c);
+            else if (c->control == 3) ai65(c);
+            car_steer(c);
+            car_throttle(c);
+            car_bins(c);
+            car_move(c);
+            car_bump(c, 8, true);
+            map65(c, i);
+        }
+        if (c->state == 1 && --c->timer < 1) c->state = 2;
+        if (c->state == 3) {
+            /* sinking: 3 px a tick, spinning, clipped at the water line */
+            AnimObj *o = &g_anim[i];
+            double y = (double)c->y + (double)3.0f;
+            c->heading = (c->heading + 0x20) & 0x3ff;
+            o->rec.clip_x0 = 0;
+            o->rec.clip_x1 = 8000;
+            c->y = (float)y;
+            o->rec.clip_y0 = 0;
+            o->rec.clip_y1 = o->d[0x17];
+            o->rec.mode = 3;
+            if (ftol(y) > o->d[0x17] + 100) {
+                if (i == 0) {
+                    c->x = 650.0f;
+                    c->y = 550.0f;
+                    c->state = 2;
+                    if (--g_bonus_count <= 0) g_end = 7;
+                } else {
+                    g_score += 1000;
+                    c->state = 4;
+                    sheep_out(i);
+                    if (--left65 <= 0) g_end = 7;
+                }
+            }
+        }
+    }
+    car_ranks(8, (int)exe_u32(0x4509d8));
+}
+
+static void lv65_init(void)
+{
+    /* 0x424aa0: eight cars two abreast (the shepherd's, quicker to respond, swapped to the last
+       place), half a second apart; lane l's waypoints are path 1 from point l + 1 on */
+    char_bank_load(0xc8, 0x450a68, 0x17, 0x450a90);
+    int y = 0x1f4;
+    for (int i = 0; i < 8; i++) {
+        Car *c = &cars[i];
+        Sheep *s = &g_sheep[i];
+        memset(c, 0, sizeof *c);
+        c->control = 3;
+        int lane = i & 3;
+        s->state = 100;
+        s->x = (float)(lane * 0x38 + 0x186);
+        s->y = (float)y;
+        s->dir = 0;
+        s->face = 0;
+        c->x = s->x;
+        c->y = s->y;
+        c->lane = lane;
+        c->max_turn = 0x34;
+        c->top = 4.0f;
+        if (i == 0) {
+            cars[0].decay = 0.96f;
+            cars[0].acc_max = 0.1f;
+            cars[0].acc_step = 0.05f;
+        } else {
+            c->decay = 0.995f;
+            c->acc_max = 0.09f;
+            c->acc_step = 0.04f;
+        }
+        c->coast = 0.999f;
+        c->state = 1;
+        c->timer = i * 0x1e;
+        y += 0x12;
+    }
+    for (int i = 8; i < MAX_SHEEP; i++) sheep_out(i);
+    float t;
+    t = cars[0].x; cars[0].x = cars[7].x; cars[7].x = t;
+    t = cars[0].y; cars[0].y = cars[7].y; cars[7].y = t;
+    int w = cars[0].timer; cars[0].timer = cars[7].timer; cars[7].timer = w;
+    left65 = 7;
+    cars[0].control = 0;
+    int counts[4] = { 0 };
+    for (int l = 0; l < 4; l++) {
+        for (int k = l + 1; path_flag(1, k) != 2 && k < 1000; k++) {
+            if (counts[l] < 64) {
+                path_point(1, k, &wp_x[counts[l]][l], &wp_y[counts[l]][l]);
+                counts[l]++;
+            }
+        }
+    }
+    g_hud_style = 7;
+    wp_count65 = counts[0];
+    g_bonus_count = 3;
+}
+
+static void lv65_tick(void)
+{
+    /* 0x424d50 */
+    g_timer_on = 0;
+    if (g_pad_x < -500) g_keyheld[DIK_LEFT]++;
+    if (g_pad_x > 500) g_keyheld[DIK_RIGHT]++;
+    if (g_pad_y < -500) g_keyheld[DIK_UP]++;
+    if (g_pad_y > 500) g_keyheld[DIK_DOWN]++;
+    cars65_tick();
+    g_player.x = g_sheep[0].x;
+    g_player.y = g_sheep[0].y;
+    g_player.in_dx = -500;
+    AnimObj *p = &g_anim[g_player.slot];
+    p->rec.scale_x = 0;
+    p->rec.scale_y = 0;
+    g_anim[PLAYER_SLOT].rec.shadow = -1;
+}
+
+static void lv65_actor(int32_t *a)
+{
+    /* 0x4249c0: state 100, a dodgem drawn from its car (no shadow while sinking); the wheels
+       turn with the speed */
+    if (a[3] != 100) return;
+    int i = a[9];
+    Car *c = &cars[i % 10];
+    AnimObj *o = &g_anim[i];
+    Sheep *s = (Sheep *)a;
+    if (c->state <= 0) return;
+    if (c->state > 2) {
+        if (c->state != 3) return;
+        o->rec.shadow = -1;
+    }
+    s->dir = s->face = c->heading >> 4;
+    s->x = c->x;
+    s->y = c->y;
+    o->type = 3;
+    int anim = i == 0 ? 0x64 : 0x31;
+    s->anim[0] = s->anim[1] = s->anim[2] = anim;
+    o->d[0x15] = c->rank + 1;
+    o->d[0x16] = 4 - c->laps;
+    if (o->d[0x16] < 0) o->d[0x16] = 0;
+    o->countdown += 1 - ftol((double)c->vel[sector(c)]);
+    if (o->countdown <= 0) o->countdown = 0;
+}
+
 /* ================================================================ dispatch */
 
 bool cars_actor(uint32_t va, int32_t *actor)
 {
     switch (va) {
     case 0x429a00: lv55_actor(actor); return true;
+    case 0x4249c0: lv65_actor(actor); return true;
     default: return false;
     }
 }
@@ -484,6 +706,8 @@ bool cars_call(uint32_t va)
     switch (va) {
     case 0x429c00: lv55_init(); return true;
     case 0x429e70: lv55_tick(); return true;
+    case 0x424aa0: lv65_init(); return true;
+    case 0x424d50: lv65_tick(); return true;
     default: return false;
     }
 }
