@@ -8,7 +8,7 @@ game, loading a saved one, the options, the best times and the credits.
 - **Shepherds and breeds.** You pick one of the four shepherds, each with their own speed and
   pull on the flock, and the sheep come in four breeds that behave differently.
 - **Power-ups** turn up in the levels and change the rules for a while.
-- **Pause** with Esc (or pad button 4): continue the game, replay the level or quit it.
+- **Pause** with Esc: continue the game, replay the level or quit it.
 
 ## Saves and settings
 

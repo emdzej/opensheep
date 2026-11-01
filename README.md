@@ -51,10 +51,11 @@ are kept in the runner's storage, where the original used the registry and files
 
 ## Controls
 
-The original defaults: arrows move the shepherd, Left Shift runs, Left Alt creeps, Space acts, Esc
-opens the pause menu. With the mouse, its motion steers the shepherd (left button runs, right button
-creeps); a gamepad works as an analog or digital pad (buttons 1 and 2 run and creep, 3 acts, 4
-pauses). M, K and J switch to mouse, keyboard and pad in a level.
+The original defaults: arrows move the shepherd, Left Shift runs, Left Alt creeps and activates
+(the game's "activate": pick up, throw, exit a level), Space shouts and drops sweets, Tab holds the
+map, Esc opens the pause menu. With the mouse, its motion steers the shepherd (left button runs,
+right button creeps); a gamepad works as an analog or digital pad (buttons 1 and 2 run and creep, 3
+shouts, 4 holds the map). M, K and J switch to mouse, keyboard and pad in a level.
 
 ## Build
 
