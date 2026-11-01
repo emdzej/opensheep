@@ -10,6 +10,7 @@ extern AnimObj *g_cam_target;       /* 0x4b9740: the camera follows this object 
 extern int g_flock_n, g_flock_sx, g_flock_sy;   /* 0x4bbd4c..0x4bbd54: sheep in view and their sum */
 extern int g_clock, g_time_limit;   /* 0x4b0f20, 0x4a2090: level ticks and the limit for the difficulty */
 extern int g_paused;                /* 0x4b0f3c */
+extern int8_t g_frozen;             /* 0x4b0f24 */
 
 /* 0x40f2a0 (part): a new game's flock: 10 sheep, 20 on hard. */
 void game_new(void);

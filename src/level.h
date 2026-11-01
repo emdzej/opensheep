@@ -56,3 +56,20 @@ void level_release(void);
 void level_set_camera(int x, int y);
 /* Map renderer 0x407ba0: the visible 20x20 (21x21 when scrolled) cells into fb. */
 void level_draw_map(Framebuffer *fb);
+
+/* ---------------------------------------------------------------- tile animations (descriptor +0x2c) */
+typedef struct {                    /* 0x4a01b0, 12 bytes */
+    int16_t mode;                   /* 0 stopped, 1 looping, 2 once, then frame `hold` and stop */
+    int16_t anim;                   /* entry in the frame buffer */
+    int16_t frame;
+    int16_t pause;
+    int16_t hold;                   /* +8 */
+    int16_t countdown;              /* +0xa */
+} TileAnim;
+enum { MAX_TILE_ANIMS = 64 };
+extern TileAnim g_tile_anim[MAX_TILE_ANIMS];
+extern int16_t g_ntile_anims;       /* 0x49fdac */
+/* 0x4037c0 with 0x4035a0: the level's tile animations and their frames, cut from the map. */
+void tile_anims_load(void);
+/* 0x403890: one tick; a frame swaps the remap entries of the animated tiles. */
+void tile_anims_tick(void);

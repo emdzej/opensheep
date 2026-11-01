@@ -10,7 +10,6 @@ extern int g_pickups;                   /* 0x4b972c: scoring pickups collected *
 extern int g_score_flash;               /* 0x4b9848: HUD flash ticks */
 extern uint8_t g_bonus;                 /* 0x4a1e90: bonus levels' flags (0x44b194 per level) */
 extern int g_timer_on;                  /* 0x4a3e90: the level clock runs */
-extern int8_t g_end_press_pad, g_end_press_key;   /* 0x4a4141, 0x4a4124: presses during the end */
 extern int g_hint_owner;                /* 0x4b9744: id of the sign showing the hint */
 extern int g_hint_shown;                /* 0x4b9754 (the hint's line list; non-zero while shown) */
 extern int g_hint_x, g_hint_y;          /* 0x4b970c, 0x4b9710 */

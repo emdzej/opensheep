@@ -3,6 +3,7 @@
    PageDown for the previous / next level; G: sprite gallery of the loaded banks, [ ] pick the bank). The front end and game states replace it as they are ported. */
 #include "app.h"
 #include "exe.h"
+#include "input.h"
 #include "level.h"
 #include "objects.h"
 #include "play.h"
@@ -98,6 +99,8 @@ static void draw_gallery(Framebuffer *fb)
     }
 }
 
+static int key_down(int key) { return plat_key_down(key); }
+
 bool app_frame(void)
 {
     if (!plat_poll()) return false;
@@ -116,11 +119,7 @@ bool app_frame(void)
         }
     }
     if (!viewer && g_level != 0) {
-        g_key_x = plat_key_down(KEY_RIGHT) - plat_key_down(KEY_LEFT);
-        g_key_y = plat_key_down(KEY_DOWN) - plat_key_down(KEY_UP);
-        g_key_run = plat_key_down(KEY_LSHIFT) || plat_key_down(KEY_RSHIFT);
-        g_key_creep = plat_key_down(KEY_LCTRL) || plat_key_down(KEY_RCTRL);
-        g_action = plat_key_down(KEY_SPACE) ? (g_action ? 2 : 1) : 0;
+        input_read(key_down);
         play_tick();
         if (trace && ++ticks % 30 == 0) {
             fprintf(stderr, "t%d shepherd %d,%d st %d | saved %d out %d |", ticks, g_player.ix, g_player.iy,

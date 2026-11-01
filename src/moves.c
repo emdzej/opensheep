@@ -1,6 +1,7 @@
 #include "moves.h"
 #include "exe.h"
 #include "game.h"
+#include "input.h"
 #include "level.h"
 #include "levels.h"
 #include "paths.h"
@@ -13,7 +14,6 @@
 
 int g_pickups, g_score_flash, g_timer_on;
 uint8_t g_bonus;
-int8_t g_end_press_pad, g_end_press_key;
 int g_hint_owner, g_hint_shown, g_hint_x, g_hint_y, g_hint;
 int g_switch_wait[32];
 
@@ -538,7 +538,7 @@ static void move_17(AnimObj *a)
     a->rec.layer = 3;
     a->rec.sortable = 0;
     int t = ++d[0x1d];
-    if (t > 300 || g_end_press_pad == 1 || g_end_press_key == 1) {
+    if (t > 300 || g_keyheld[DIK_SPACE] == 1 || g_keyheld[DIK_RETURN] == 1) {
         g_level_over = 0;
         if (d[0x15] == 0) g_end = 3;
         else if (d[0x15] == 1) g_end = 5;

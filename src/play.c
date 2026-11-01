@@ -1,5 +1,6 @@
 #include "play.h"
 #include "level.h"
+#include "input.h"
 #include "levels.h"
 #include "moves.h"
 #include "paths.h"
@@ -19,6 +20,7 @@ int8_t g_flock_size[4];
 AnimObj *g_cam_target;
 int g_clock, g_time_limit;          /* 0x4b0f20, 0x4a2090 */
 int g_paused;                       /* 0x4b0f3c */
+int8_t g_frozen;                    /* 0x4b0f24: the cheat that stops the actors */
 static int tim_hard, tim_normal, tim_easy;   /* 0x4a1eac, 0x4a28c8, 0x4a20b0 */
 int g_flock_n, g_flock_sx, g_flock_sy;
 static float cam_tx, cam_ty;        /* 0x4a3ea0, 0x4a4210 */
@@ -44,7 +46,8 @@ bool level_load_resources(void)
     /* TODO: the CPUI banks (0x44a3f8) */
     level_load_sprite_banks();
     anims_load(world_level_path(".anm"));
-    /* TODO: the tile animations (0x4037c0), the level's sounds (0x401730) */
+    tile_anims_load();
+    /* TODO: the level's sounds (0x401730) */
     objects_load(world_level_path(".pos"));
     paths_load();
     game_init_tables();
@@ -191,13 +194,10 @@ void camera_update(Player *p)
 
 void play_tick(void)
 {
-    for (int i = 0; i < MAX_SPECIAL; i++) g_special[i].count = 0;
-    if (!g_level_over) player_tick(&g_player);
-    if (g_world != 7) sheep_tick();
-    camera_update(&g_player);
-    /* TODO: the level's tick hook (descriptor +0x10) */
-    objects_update();
-    /* the rest of 0x40b9b0's tick */
+    /* one pass of 0x40b9b0's tick loop */
+    input_keys_tick();
+    input_map();
+    /* TODO: the cheat keys (0x40b870) */
     if (g_score_flash) g_score_flash--;
     if (!g_paused && g_timer_on) g_clock++;
     if (g_clock == g_time_limit && g_world != 9 && !g_level_over) {
@@ -205,6 +205,16 @@ void play_tick(void)
         g_anim[s].move = 0x11;
         g_anim[s].d[0x15] = 2;
     }
+    g_counted = 0;
+    for (int i = 0; i < MAX_SPECIAL; i++) g_special[i].count = 0;
+    if (!g_frozen) {
+        if (!g_level_over) player_tick(&g_player);
+        if (g_world != 7) sheep_tick();
+    }
+    camera_update(&g_player);
+    /* TODO: the level's tick hook (descriptor +0x10) */
+    objects_update();
+    tile_anims_tick();
 }
 
 void play_draw(Framebuffer *fb)

@@ -1,6 +1,8 @@
 /* Level file loading and the tile map renderer. */
 #include "level.h"
+#include "exe.h"
 #include "sprites.h"
+#include "world.h"
 #include "xp.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -215,4 +217,96 @@ int level_load_sprite_banks(void)
         if (sprite_bank_load(SPR_BANK_LEVEL + i, path)) loaded++;
     }
     return loaded;
+}
+
+/* ------------------------------------------------------------------ tile animations */
+
+TileAnim g_tile_anim[MAX_TILE_ANIMS];
+int16_t g_ntile_anims;
+static int16_t *anim_buf;           /* 0x49c074: per anim a byte offset, then {cells, frames, 2, targets, frames} */
+static size_t anim_buf_n;
+
+/* A cell of the map at (x, y) with the renderer's 128-cell rows, as a tile index (number - 1). */
+static int16_t map_tile(int x, int y)
+{
+    size_t i = (size_t)y * MAP_STRIDE + (size_t)x;
+    const uint16_t *end = (const uint16_t *)(g_lv.blo + g_lv.blo_size);
+    if (x < 0 || y < 0 || g_lv.map + i >= end) return -1;
+    return (int16_t)((g_lv.map[i] & 0x3fff) - 1);
+}
+
+static void build_frames(uint32_t ext)
+{
+    /* 0x4035a0: ext holds per anim {x, y (px), w, h (cells), dx, dy (cells per frame), frames} */
+    int16_t *buf = calloc(0x8000, 2), *p = buf + g_ntile_anims, *lim = buf + 0x8000;
+    for (int k = 0; k < g_ntile_anims; k++, ext += 14) {
+        int16_t x = (int16_t)exe_u16(ext), y = (int16_t)exe_u16(ext + 2), w = (int16_t)exe_u16(ext + 4),
+                h = (int16_t)exe_u16(ext + 6), dx = (int16_t)exe_u16(ext + 8), dy = (int16_t)exe_u16(ext + 10),
+                frames = (int16_t)exe_u16(ext + 12);
+        buf[k] = (int16_t)((p - buf) * 2);
+        if (p + 3 > lim) break;
+        p[0] = (int16_t)(h * w);
+        p[1] = frames;
+        p[2] = 2;
+        p += 3;
+        int cy = y / TILE_H, cx = x / 32;
+        for (int f = -1; f < frames; f++) {         /* the targets, then each frame */
+            for (int j = 0; j < h; j++)
+                for (int i = 0; i < w && p < lim; i++) *p++ = map_tile(cx + i, cy + j);
+            if (f >= 0) { cx += dx; cy += dy; }
+        }
+    }
+    anim_buf_n = (size_t)(p - buf);
+    anim_buf = realloc(buf, anim_buf_n * 2 + 2);
+}
+
+void tile_anims_load(void)
+{
+    uint32_t t = desc_u32(DESC_TILE_ANIMS);
+    free(anim_buf);
+    anim_buf = NULL;
+    anim_buf_n = 0;
+    g_ntile_anims = 0;
+    if (!t) return;
+    int16_t v = (int16_t)exe_u16(t);
+    while (v != -1 && v != 0x800 && g_ntile_anims < MAX_TILE_ANIMS) {
+        TileAnim *a = &g_tile_anim[g_ntile_anims++];
+        a->mode = (int16_t)exe_u16(t + 4);
+        a->anim = v;
+        a->frame = 0;
+        a->pause = a->countdown = (int16_t)exe_u16(t + 2);
+        t += 6;
+        v = (int16_t)exe_u16(t);
+    }
+    if (v == 0x800) {
+        build_frames(t + 6);
+        return;
+    }
+    g_ntile_anims = 0;              /* the original keeps a 256-byte buffer it never fills */
+}
+
+void tile_anims_tick(void)
+{
+    for (int k = 0; k < g_ntile_anims; k++) {
+        TileAnim *a = &g_tile_anim[k];
+        if (!a->mode || --a->countdown >= 0) continue;
+        if (!anim_buf || a->anim < 0 || a->anim >= g_ntile_anims) continue;
+        const int16_t *h = anim_buf + anim_buf[a->anim] / 2;
+        a->countdown = a->pause;
+        if (a->frame + 1 < h[1]) {
+            a->frame++;
+        } else if (a->mode == 2) {
+            a->frame = a->hold;
+            a->mode = 0;
+        } else if (h[2] == 1) {
+            a->mode = 0;
+        } else if (h[2] == 2) {
+            a->frame = 0;
+        }
+        int n = h[0];
+        const int16_t *src = h + 3 + (a->frame + 1) * n;
+        if (src + n > anim_buf + anim_buf_n) continue;
+        for (int i = 0; i < n; i++)
+            if (h[3 + i] >= 0 && h[3 + i] < MAX_TILES) g_lv.remap[h[3 + i]] = (uint16_t)src[i];
+    }
 }
