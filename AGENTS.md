@@ -21,6 +21,8 @@ guarded, with a comment describing what the original does.
 
 1. **Never commit original data or anything derived from it.** `cd/`, `re/` (decompiler dumps), `out/`,
    `sheep_game.exe` (the local copy of `Sheep.exe`) and the ISO are git-ignored: keep it that way.
+   The one exception: the site's screenshots, frames of the running game in `docs/public/screenshots/`
+   (no extracted sprites, sounds or movies).
 2. **No tables copied from the executable.** What the game needs from `Sheep.exe` (strings, level and
    object tables, menu pages, fonts, palettes, constants in `.rdata`) is read at run time through
    `src/exe.h` (`exe_u8/u16/u32/s16/s32/f32/f64`, `exe_str`, `exe_wtext`). The same for `binkw32.dll`'s

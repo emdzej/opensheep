@@ -48,4 +48,22 @@ portable game runtime: `gasm-run` on the desktop, or this site's [player](/play/
 browser. The same inputs give the same frames and sound everywhere, which is how the port is tested:
 23 levels played headless, hash for hash.
 
+## Screenshots
+
+<div class="shots">
+  <img src="/screenshots/farm.jpg" alt="A farmyard level with a flock among the fences">
+  <img src="/screenshots/castle.jpg" alt="A castle level with a tower and a catapult">
+  <img src="/screenshots/space.jpg" alt="A level on a circuit board in space">
+  <img src="/screenshots/city.jpg" alt="A city street at night with a burning car">
+  <img src="/screenshots/herders.jpg" alt="Choosing a herder: Bo Peep, Adam Halfpint, Motley or Shep">
+  <img src="/screenshots/dodgems.jpg" alt="The city world's bonus game: dodgems">
 </div>
+
+[More in the gallery](/gallery)
+
+</div>
+
+<style>
+.shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px; }
+.shots img { width: 100%; aspect-ratio: 4 / 3; border-radius: 14px; box-shadow: var(--vp-shadow-soft); image-rendering: auto; }
+</style>

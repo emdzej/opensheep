@@ -16,6 +16,7 @@ export default defineConfig({
     ["meta", { property: "og:title", content: "OpenSheep — Sheep, native again" }],
     ["meta", { property: "og:description", content: "A faithful, from-scratch reimplementation of Sheep, on the gasm runtime: macOS, Linux, Windows and the browser." }],
     ["meta", { property: "og:url", content: "https://opensheep.emdzej.pl/" }],
+    ["meta", { property: "og:image", content: "https://opensheep.emdzej.pl/screenshots/farm.jpg" }],
   ],
 
   themeConfig: {
@@ -25,6 +26,7 @@ export default defineConfig({
     nav: [
       { text: "User guide", link: "/guide/", activeMatch: "/guide/" },
       { text: "Internals", link: "/architecture", activeMatch: "/(architecture|formats)" },
+      { text: "Gallery", link: "/gallery" },
       // A static app in docs/public/play/: target _self makes it a full page load, not a VitePress route.
       { text: "Play", link: "/play/", target: "_self" },
     ],
