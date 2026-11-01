@@ -1,6 +1,5 @@
 /* overview W.L [scale] [ticks] > out.ppm: the whole level after level_start and that many ticks (map,
-   objects, flock, shepherd)
-   rendered screen by screen and shrunk by scale (default 4). A development aid; reads the data like
+   objects, flock, shepherd) rendered screen by screen and shrunk by scale (default 4). A development aid; reads the data like
    the tests (./cd or OPENSHEEP_DATA). */
 #include "exe.h"
 #include "level.h"
