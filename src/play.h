@@ -17,6 +17,9 @@ void game_new(void);
 bool level_load_resources(void);
 /* 0x406cc0 with mode 0: place the flock and the shepherd. */
 void level_start(void);
+/* 0x406cc0(2): the flock dropped again around (g_cursor_x, g_cursor_y), the shepherd there, the
+   score and the clock kept (the free roam's right button, 0x40aea0). */
+void level_regroup(void);
 /* Level_LoadTim 0x406c00: the time limits of a level (g_tim_*). */
 void level_load_tim(int world, int level);
 /* 0x40cb40 */

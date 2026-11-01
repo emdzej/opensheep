@@ -104,7 +104,9 @@ void level_load_tim(int world, int level)
     g_tim_easy = g_tim_normal + 18000;
 }
 
-void level_start(void)
+/* 0x406cc0 after the load: mode 1 a level's start, mode 2 the flock dropped again around
+   (g_cursor_x, g_cursor_y), the score and clock kept */
+static void start(int mode)
 {
     static const int needed[3] = { 5, 10, 0x14 };
     g_needed = needed[g_difficulty < 0 ? 0 : g_difficulty > 2 ? 2 : g_difficulty];
@@ -115,7 +117,7 @@ void level_start(void)
     int flock = g_nsheep = g_flock_size[g_breed & 3];
     memset(g_sheep, 0, sizeof g_sheep);
     for (int i = g_nsheep; i < MAX_SHEEP; i++) g_sheep[i].alive = 2;
-    for (int k = 0; k < nextra && g_nsheep < MAX_SHEEP; k++) {
+    for (int k = 0; mode == 1 && k < nextra && g_nsheep < MAX_SHEEP; k++) {
         Sheep *s = &g_sheep[g_nsheep++];
         s->state = 0;
         s->d[0x1d] |= 1;
@@ -126,7 +128,10 @@ void level_start(void)
     for (int i = 0; i < g_nsheep; i++) {
         Sheep *s = &g_sheep[i];
         s->alive = 0;
-        if (i < flock && i + 1 < g_lv.nobjects) {
+        if (mode == 2) {
+            s->x = (float)(int)((rng_next() & 0x7f) - 0x40) + (float)g_cursor_x;
+            s->y = (float)(int)((rng_next() & 0x7f) - 0x40) + (float)g_cursor_y;
+        } else if (i < flock && i + 1 < g_lv.nobjects) {
             s->x = b_float(i + 1, 0);
             s->y = b_float(i + 1, 1);
         }
@@ -149,11 +154,16 @@ void level_start(void)
     g_end = 0;
     player_init(&g_player);
     memset(g_chain, 0, sizeof g_chain);
-    g_score = 0;
-    g_clock = 0;
-    g_timer_on = 1;
-    g_player.x = b_float(0, 0);
-    g_player.y = b_float(0, 1);
+    if (mode != 2) {
+        g_score = 0;
+        g_clock = 0;
+        g_timer_on = 1;
+        g_player.x = b_float(0, 0);
+        g_player.y = b_float(0, 1);
+    } else {
+        g_player.x = (float)g_cursor_x;
+        g_player.y = (float)g_cursor_y;
+    }
     g_scroll_reset = 1;
     camera_update(&g_player);
     g_level_over = 0;
@@ -163,9 +173,13 @@ void level_start(void)
     g_action = 0;
     g_scroll_reset = 1;
     g_cam_target = NULL;
-    level_hook(DESC_INIT);             /* 0x406cc0 calls it in mode 1, a level's first start */
+    if (mode == 1) level_hook(DESC_INIT);
     demo_start();
 }
+
+void level_start(void) { start(1); }
+
+void level_regroup(void) { start(2); }
 
 /* 0x40cb40: ease toward the target 0.2 px/tick per tick of difference / 16 */
 static float ease(float v, float t)

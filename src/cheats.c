@@ -8,6 +8,10 @@
 #include "input.h"
 #include "world.h"
 #include "play.h"
+#include "sheep.h"
+#include "rng.h"
+#include "player.h"
+#include "level.h"
 #include "platform.h"
 #include "sound.h"
 #include "sprites.h"
@@ -142,11 +146,44 @@ quit:
     if (g_keyheld[DIK_LMENU] && g_keyheld[DIK_F1 + 3]) g_quit = true;
 }
 
+static void free_roam(void)
+{
+    /* 0x40aea0: the shepherd moved by the mouse and 16 px a tick by the arrows, kept a tile inside
+       the level. A button ends it; the right one drops the flock again around him (0x406cc0(2), with
+       0x4b0f28, which nothing reads, set to 5 over it), in 3.4 all of them as kind 0x13 */
+    int a2 = g_player.attract2;
+    g_player.x = (float)((double)g_key_x * 16.0 + (double)g_mouse_dx + (double)g_player.x);
+    g_player.y = (float)((double)g_key_y * 16.0 + (double)g_mouse_dy + (double)g_player.y);
+    if (g_player.x < 32.0f) g_player.x = 32.0f;
+    if (g_player.y < 24.0f) g_player.y = 24.0f;
+    if ((float)(g_lv.px_w - 0x20) < g_player.x) g_player.x = (float)(g_lv.px_w - 0x20);
+    if ((float)(g_lv.px_h - 0x18) < g_player.y) g_player.y = (float)(g_lv.px_h - 0x18);
+    if (g_run || g_creep) {
+        g_player.in_dx = g_player.in_dy = 0;
+        g_frozen = 0;
+        if (g_creep) {
+            if (g_player.attract >= 0 && g_player.attract < MAX_ATTRACT) g_attract[g_player.attract].type = 0;
+            if (a2 >= 0 && a2 < MAX_ATTRACT) g_attract[a2].type = 0;
+            g_cursor_x = ftol((double)g_player.x);
+            g_cursor_y = ftol((double)g_player.y);
+            int clock = g_clock;
+            level_regroup();
+            g_clock = clock;
+            if (g_world == 3 && g_level == 4) {
+                for (int i = 0; i < MAX_SHEEP; i++) g_sheep[i].kind = 0x13;
+                g_player.kind = 0x13;
+            }
+        }
+    }
+    g_scroll_reset = 1;
+}
+
 void cheat_debug_keys(void)
 {
-    /* part of 0x408ca0, with OUR_MENU: Home stops the actors (TODO: the editor 0x40aea0 it runs then) */
+    /* part of 0x408ca0, with OUR_MENU: Home stops the actors and lets the shepherd roam */
     if (!g_our_menu) return;
     if (g_keyheld[0xc7] == 1) g_frozen = !g_frozen;
+    if (g_frozen == 1) free_roam();
 }
 
 void cheat_screenshot(void)

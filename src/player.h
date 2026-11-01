@@ -4,6 +4,7 @@
 #include "game.h"
 
 extern int g_in_raw_x, g_in_raw_y;      /* 0x4b9820, 0x4b9824: this tick's raw input */
+extern int g_cursor_x, g_cursor_y;     /* 0x4ae058, 0x4ae068 (player.c) */
 extern int g_key_x, g_key_y;            /* 0x4b0fa0, 0x4b0fa4: keyboard -1 / 0 / 1 */
 extern int g_key_run, g_key_creep;      /* 0x4b0b58, 0x4a3b3c */
 extern int g_pad_x, g_pad_y;            /* 0x4bc924, 0x4bc928 */
