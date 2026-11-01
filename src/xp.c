@@ -26,16 +26,18 @@ static int nmounted;
 
 static uint32_t le32(const uint8_t *p) { return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24; }
 
-/* Normalise a game path: '/' separators, upper case, no leading separators. */
+/* Normalise a game path: '/' separators, upper case, no leading or repeated separators (some level
+   tables give names with a leading '\\' that the code appends after one; Windows ignores the double). */
 static void norm(const char *in, char *out, size_t cap)
 {
     while (*in == '\\' || *in == '/') in++;
-    size_t i = 0;
-    for (; in[i] && i + 1 < cap; i++) {
-        char c = in[i] == '\\' ? '/' : in[i];
-        out[i] = c >= 'a' && c <= 'z' ? (char)(c - 32) : c;
+    size_t o = 0;
+    for (; *in && o + 1 < cap; in++) {
+        char c = *in == '\\' ? '/' : *in;
+        if (c == '/' && o && out[o - 1] == '/') continue;
+        out[o++] = c >= 'a' && c <= 'z' ? (char)(c - 32) : c;
     }
-    out[i] = 0;
+    out[o] = 0;
 }
 
 static void add(Xp *x, const char *path, uint32_t off, uint32_t stored, uint32_t unpacked, uint8_t flags)
