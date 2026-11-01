@@ -532,6 +532,252 @@ static void lv25_actor(int32_t *a)
     g_player.in_dx = -500;
 }
 
+/* ================================================================ 3.5: the shooting gallery */
+
+/* Three rounds, one screen each (640 px apart): six waves of five targets fly in along paths; the
+   shepherd walks the bottom edge, loads a cannon (Lv35_Move_02) and its shot (Move_00) knocks down
+   a target (Move_03); targets past their second point drop bombs (Move_01). */
+static int round35;               /* 0x65fea4 */
+static int wave;                  /* 0x65fe98 */
+static int wave_wait;             /* 0x65feac */
+static int spawn_t;               /* 0x65fea0 */
+static int bomb_t;                /* 0x65fe94 */
+static int left35;                /* 0x65feb0: targets still up this round */
+static int ntargets;              /* 0x65feb4 */
+static AnimObj *targets[30];      /* 0x65feb8 */
+
+static void lv35_round(void)
+{
+    /* 0x425810 */
+    int x0 = round35 * 0x280;
+    g_lv.cam_min_x = x0;
+    g_lv.cam_max_x = x0 + 0x280;
+    left35 = 0x1e;
+    bomb_t = 0x3c;
+    wave_wait = 0x3c;
+    g_player.y = 430.0f;
+    memset(targets, 0, sizeof targets);
+    g_player.x = (float)((double)x0 + (double)405.0f);
+    g_player.state = 100;
+    g_lv.cam_min_y = 0;
+    g_lv.cam_max_y = 0x1e0;
+    wave = 0;
+    spawn_t = 0;
+    ntargets = 0;
+    g_hud_style = 4;
+}
+
+static void lv35_init(void)
+{
+    /* 0x4258b0 */
+    for (int i = 0; i < MAX_SHEEP; i++) sheep_out(i);
+    round35 = 0;
+    g_bonus_count = 3;
+    lv35_round();
+}
+
+static void lv35_tick(void)
+{
+    /* 0x4258e0: a wave a second after the last (five targets, a second apart, on path 0x1d +
+       wave + 10 x round); a bomb every 32-95 ticks from a random target */
+    g_timer_on = 0;
+    int t = spawn_t;
+    bool go = false;
+    if (wave_wait > 0) {
+        if (--wave_wait == 0) {
+            t = 0x12c;
+            if (++wave < 6) wave_wait = 0x258;
+            go = true;
+        }
+    }
+    if (go || t > 0) {
+        spawn_t = t - 1;
+        if (spawn_t % 0x3c == 0) {
+            int p = wave + round35 * 10 + 0x1d;
+            if (p > 0x37) p = 0x37;
+            path_start(p);
+            AnimObj *o = &g_anim[anim_new(g_path_x, g_path_y, 0x2b, -1, 3)];
+            path_begin(o, p, 2, 1);
+            o->move = 0x8003;
+            o->d[0x15] = ntargets;
+            if (ntargets < 30) targets[ntargets] = o;   /* the original has no check (5 x 6 fit) */
+            ntargets++;
+        }
+    }
+    if (--bomb_t <= 0) {
+        int i = (int32_t)rng_next() % 0x1e;
+        for (int n = 0x1e; n > 0; n--)
+            if (!targets[i]) i = (i + 1) % 0x1e;
+        AnimObj *o = targets[i];
+        if (o && o->d[0x24] > 1) g_anim[anim_new(o->x, o->y, 0x2c, -1, 3)].move = 0x8001;
+        bomb_t = (int)(rng_next() & 0x3f) + 0x20;
+    }
+    if (left35 != 0) return;
+    if (++round35 < 3) lv35_round();
+    else g_end = 7;
+}
+
+static void lv35_steer(int32_t *a)
+{
+    /* 0x425a80: left / right only (turning on the spot 16 a tick, else 8), kept 20 px inside
+       the round's screen */
+    Player *p = (Player *)a;
+    p->in_dy = 0;
+    p->anim[0] = 0;
+    p->anim[1] = 1;
+    p->anim[2] = 1;
+    int dx = p->in_dx;
+    int to = dx < -1 ? 0xc0 : 0;
+    if (dx > 1) to = 0x40;
+    int r = iabs(dx);
+    if (r > 0x80) {
+        p->in_dx = g_isin[to] / 256;
+        r = 0x80;
+    }
+    p->in_mag = r;
+    bool turn = true;
+    int step = 8;
+    if (p->speed == 0.0f && p->dir != to) {
+        if (r <= 0x10) turn = false;
+        else step = 0x10;
+    }
+    if (turn) {
+        p->dir = p->face = dir_turn(p->dir, to, step);
+    }
+    if (!turn || r <= 0x10) {
+        p->speed = 0;
+    } else {
+        p->speed = p->walk;
+        if (g_run) p->speed = p->run;
+    }
+    p->x = (float)((double)g_sin[p->dir] * (double)p->speed + (double)p->x);
+    float lo = (float)(g_lv.cam_min_x + 0x14), hi = (float)(g_lv.cam_max_x - 0x14);
+    if (p->x < lo) p->x = lo;
+    if (hi < p->x) p->x = hi;
+    player_specials(ftol((double)p->x), ftol((double)p->y), p, 1);
+    p->face = p->dir;
+}
+
+static void lv35_actor(int32_t *a)
+{
+    /* 0x425bd0: 100 walking; 0x65 hit by a bomb (anim 5, then out of lives the end); 0x66
+       loading the cannon (anim 3) */
+    int slot = a[9];
+    AnimObj *o = &g_anim[slot];
+    switch (a[3]) {
+    case 100:
+        lv35_steer(a);
+        return;
+    case 0x65:
+        if (slot <= 0x1e) return;
+        a[0xe] = 5;
+        ((float *)a)[1] = 0;
+        if (o->anim != 5) {
+            anim_set(slot, 5, -1);
+            return;
+        }
+        if (o->state != 2) return;
+        if (g_bonus_count <= 0) g_end = 7;
+        else a[3] = 100;
+        return;
+    case 0x66:
+        a[0xe] = 3;
+        ((float *)a)[1] = 0;
+        if (o->anim != 3) {
+            anim_set(slot, 3, -1);
+            return;
+        }
+        o->countdown = 0;
+        if (o->state == 2) player_set_state((Player *)a, 100);
+        return;
+    }
+}
+
+static void lv35_move_00(AnimObj *a)
+{
+    /* 0x425cb0: the shot, along its path; a target within 20 px (Manhattan, 10 px low) falls */
+    path_follow(a);
+    for (int i = 0; i < 30; i++) {
+        AnimObj *t = targets[i];
+        if (t && iabs(a->y - t->y + 10) + iabs(a->x - t->x) < 0x14) {
+            t->sub = 1;
+            anim_kill(a);
+        }
+    }
+}
+
+static void lv35_move_01(AnimObj *a)
+{
+    /* 0x425d10: a bomb, 2 px a tick down; on the walking shepherd it costs a life */
+    a->y += 2;
+    if (a->y > 0x1e0) anim_kill(a);
+    int r = iabs(a->y - ftol((double)g_player.y) + 0x1a) + iabs(a->x - ftol((double)g_player.x));
+    if (r < 0x12 && g_player.state == 100) {
+        g_player.state = 0x65;
+        g_bonus_count--;
+        anim_kill(a);
+    }
+}
+
+static void lv35_move_02(AnimObj *a)
+{
+    /* 0x425da0: the cannon: touched, the shepherd loads it (0x66); then anim d15, a shot (anim
+       d16) along path d17, and a second's rest */
+    int32_t *d = a->d;
+    switch (a->sub) {
+    case 0:
+        if (d[0x22] != -1) {
+            player_set_state(&g_player, 0x66);
+            a->sub = 1;
+        }
+        break;
+    case 1: {
+        if (g_player.state == 0x66) break;
+        d[0x1d] = a->anim;
+        anim_set(a->slot, d[0x15], -1);
+        path_start(d[0x17]);
+        AnimObj *b = &g_anim[anim_new(g_path_x, g_path_y, d[0x16], -1, 3)];
+        path_begin(b, d[0x17], 4, 1);
+        b->move = 0x8000;
+        d[0x1e] = 0x3c;
+        a->sub = 2;
+        break;
+    }
+    case 2: {
+        int t = d[0x1e];
+        d[0x1e] = t - 1;
+        if (t < 1) {
+            anim_set(a->slot, d[0x1d], -1);
+            d[0x22] = -1;
+            a->sub = 0;
+        }
+        break;
+    }
+    }
+}
+
+static void lv35_move_03(AnimObj *a)
+{
+    /* 0x425ea0: a target along its path (gone at the end); shot, it falls (anim 0x2a) for 100 */
+    switch (a->sub) {
+    case 0:
+        if (path_follow(a)) a->sub = 2;
+        break;
+    case 1:
+        if (a->anim != 0x2a) anim_set(a->slot, 0x2a, a->dir < 8 ? 4 : 0xc);
+        if (a->state == 2) {
+            g_score += 100;
+            a->sub = 2;
+        }
+        break;
+    case 2:
+        if (a->d[0x15] >= 0 && a->d[0x15] < 30) targets[a->d[0x15]] = NULL;
+        anim_kill(a);
+        left35--;
+        break;
+    }
+}
+
 /* ================================================================ dispatch */
 
 bool bonus_actor(uint32_t va, int32_t *actor)
@@ -539,6 +785,7 @@ bool bonus_actor(uint32_t va, int32_t *actor)
     switch (va) {
     case 0x423ef0: lv15_actor(actor); return true;
     case 0x42ac60: lv25_actor(actor); return true;
+    case 0x425bd0: lv35_actor(actor); return true;
     default: return false;
     }
 }
@@ -550,6 +797,8 @@ bool bonus_call(uint32_t va)
     case 0x423e70: lv15_tick(); return true;
     case 0x42a920: lv25_init(); return true;
     case 0x42aa30: lv25_tick(); return true;
+    case 0x4258b0: lv35_init(); return true;
+    case 0x4258e0: lv35_tick(); return true;
     default: return false;
     }
 }
@@ -560,6 +809,10 @@ MoveFn bonus_move(uint32_t va)
     case 0x424000: return lv15_move_00;
     case 0x424390: return lv15_move_01;
     case 0x424840: return lv15_move_02;
+    case 0x425cb0: return lv35_move_00;
+    case 0x425d10: return lv35_move_01;
+    case 0x425da0: return lv35_move_02;
+    case 0x425ea0: return lv35_move_03;
     default: return NULL;
     }
 }
