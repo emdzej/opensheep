@@ -7,9 +7,11 @@
 #include "level.h"
 #include "levels.h"
 #include "moves.h"
+#include "objects.h"
 #include "play.h"
 #include "results.h"
 #include "hiscore.h"
+#include "credits.h"
 #include "player.h"
 #include "sprites.h"
 #include "world.h"
@@ -310,6 +312,15 @@ static void level_end(void)
     }
 }
 
+/* Level_ReleaseTiles 0x4077b0 and 0x40d030 before a screen: the level's tiles, animations and every
+   sprite bank. TODO: the sound and music stop (0x419490, 0x4193c0, 0x41ef60) */
+static void leave_level(void)
+{
+    level_release();
+    anims_free();
+    sprite_banks_free_all();
+}
+
 void flow_start(int state)
 {
     g_app_state = state;
@@ -377,13 +388,20 @@ bool flow_frame(Framebuffer *fb)
         else results_end();
         break;
     case APP_CREDITS:
-        /* TODO: the credits (0x40d7a0, 0x40d9e0, 0x40dc70) */
-        go(APP_MENU, 0, 0);
+        if (g_app_sub == 0) {
+            leave_level();
+            credits_start();
+            g_app_sub = 1;
+        } else if (g_app_sub == 1) {
+            credits_frame(fb);
+        } else {
+            credits_end();
+            go(APP_MENU, 0, 0);
+        }
         break;
     case APP_HISCORES:
         if (g_app_sub == 0) {
-            /* 0x4077b0 and 0x40d030: the level's tiles, objects and banks go first */
-            level_release();
+            leave_level();
             hiscores_start();
             g_app_sub = 1;
         } else if (g_app_sub == 1) {

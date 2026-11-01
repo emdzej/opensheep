@@ -6,7 +6,6 @@
 #include "game.h"
 #include "hud.h"
 #include "input.h"
-#include "objects.h"
 #include "platform.h"
 #include "rng.h"
 #include "sprites.h"
@@ -131,9 +130,7 @@ static int blink;            /* 0x4b10dc */
 
 void hiscores_start(void)
 {
-    /* 0x40e420 (after 0x40d030 freed the level's banks) */
-    anims_free();
-    sprite_banks_free_all();
+    /* 0x40e420 */
     surface_free(back);
     back = surface_load_bmp(exe_str(0x44bc24));
     sprite_bank_load_misc(SPR_BANK_MISC, "Misc.spr");
