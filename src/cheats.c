@@ -116,10 +116,9 @@ void cheat_keys(void)
         if (g_our_menu) {
             if (!g_keyheld[DIK_LSHIFT]) goto quit;
             if (g_keyheld[DIK_D] == 1) {
-                /* Shift+D: the level won with the whole flock. The breed's bit is read as a byte of the
-                   0x44b198 dwords, so only the first breed's is ever set */
+                /* Shift+D: the level won with the whole flock */
                 g_end = 1;
-                g_prog.breeds |= exe_u8(0x44b198 + (uint32_t)g_breed);
+                g_prog.breeds |= exe_u8(0x44b198 + 4 * (uint32_t)g_breed);
                 g_prog.levels |= exe_u8(0x44b194 + 4 * (uint32_t)g_level);
                 g_prog.bonus |= exe_u8(0x44b194 + 4 * (uint32_t)g_level);
                 g_saved = g_nsheep;

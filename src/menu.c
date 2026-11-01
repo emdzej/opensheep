@@ -518,6 +518,20 @@ static bool name_key(void)
     return false;
 }
 
+uint16_t *menu_name(void) { return name_buf(); }
+
+void menu_name_start(void)
+{
+    name_len = 0;
+    last_key = g_last_key;
+}
+
+bool menu_name_key(int max)
+{
+    name_max = max;
+    return name_key();
+}
+
 static void menu_tick(void)
 {
     /* Menu_Tick 0x427f40 */

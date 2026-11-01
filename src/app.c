@@ -5,6 +5,7 @@
 #include "exe.h"
 #include "flow.h"
 #include "cheats.h"
+#include "hiscore.h"
 #include "font.h"
 #include "hud.h"
 #include "xp.h"
@@ -97,6 +98,7 @@ bool app_init(int argc, char **argv)
     for (int i = 1; i + 1 < argc; i++)
         if (!strcmp(argv[i], "--ini")) ini_parse(argv[i + 1], strlen(argv[i + 1]));
     xp_mount("main.xp");
+    hiscores_init();                    /* 0x408990 */
     if (!strings_load()) fprintf(stderr, "no GameStrings\n");
     if (!fonts_load()) fprintf(stderr, "no fonts\n");
     if (front_end && !viewer) {

@@ -2,6 +2,7 @@
    screens between them. */
 #pragma once
 #include <stdbool.h>
+#include <stdint.h>
 #include "game.h"
 #include "platform.h"
 
@@ -33,3 +34,8 @@ void flow_new_game(void);
 void flow_level_reload(void);
 /* menu.c: a save's name being typed (0x65ffa8): the keys are text. */
 bool menu_naming(void);
+/* menu.c: the name being typed (0x65ffb8, 0x20 characters), its start (length 0, the key down now
+   not typed) and one tick of typing (0x427ea0, up to max characters): true on Enter. */
+uint16_t *menu_name(void);
+void menu_name_start(void);
+bool menu_name_key(int max);

@@ -9,6 +9,7 @@
 #include "moves.h"
 #include "play.h"
 #include "results.h"
+#include "hiscore.h"
 #include "player.h"
 #include "sprites.h"
 #include "world.h"
@@ -190,26 +191,35 @@ static void after_level(void)
 
 static void results_end(void)
 {
-    /* App_Frame state 10 once the screen is done: the flock left, the level and breed done, the
-       best result kept */
+    /* App_Frame state 10 once the screen is done: the flock left, the level and breed done */
     g_hiscore_mark = -1;
     if (g_level != 5 && g_world != 7) {
         g_flock_size[g_breed & 3] = (int8_t)g_saved;
         g_prog.breeds = (uint8_t)(g_prog.breeds | bit(g_breed & 3));
     }
     g_prog.levels = (uint8_t)(g_prog.levels | exe_u32(0x44b194 + 4 * (uint32_t)g_level));
-    /* TODO: the best results (0x40fe20) and the end of world 7 (the movie, the scores, the credits) */
+    /* a game's score goes in the table when it ends: lost, or world 7 won and continued; a level
+       played for its best, whenever it's won */
+    bool best = g_game_mode == 1;
     if (g_world == 7 && g_4b911c == 1 && g_end == 1) {
+        flow_world_movie(g_theme);
+        best = true;
+    }
+    if (g_end != 1 && g_end != 7) best = true;
+    if (best) g_hiscore_mark = hiscore_insert(g_world, g_level, g_game_mode, g_prog.score, g_prog.u84);
+    if (g_world == 7) {
+        if (g_4b911c == 1 && g_end == 1) {
+            g_app_state = APP_HISCORES;
+            g_app_sub = 0;
+        } else {
+            after_level();
+        }
+    } else if (g_hiscore_mark == -1) {
+        after_level();
+    } else {
         g_app_state = APP_HISCORES;
         g_app_sub = 0;
-        return;
     }
-    if (g_world != 7 && g_hiscore_mark != -1) {
-        g_app_state = APP_HISCORES;
-        g_app_sub = 0;
-        return;
-    }
-    after_level();
 }
 
 static bool level_begin(void)
@@ -371,12 +381,21 @@ bool flow_frame(Framebuffer *fb)
         go(APP_MENU, 0, 0);
         break;
     case APP_HISCORES:
-        /* TODO: the best scores (0x40e420, 0x40e6b0, 0x40e8f0) */
-        if (g_world == 7) {
-            g_app_state = APP_CREDITS;
-            g_app_sub = 0;
+        if (g_app_sub == 0) {
+            /* 0x4077b0 and 0x40d030: the level's tiles, objects and banks go first */
+            level_release();
+            hiscores_start();
+            g_app_sub = 1;
+        } else if (g_app_sub == 1) {
+            hiscores_frame(fb);
         } else {
-            after_level();
+            hiscores_end();
+            if (g_world == 7) {
+                g_app_state = APP_CREDITS;
+                g_app_sub = 0;
+            } else {
+                after_level();
+            }
         }
         break;
     case APP_END1: case APP_END2: case APP_END3:
