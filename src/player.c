@@ -582,7 +582,7 @@ static void player_unstick(Player *p)
     p->y = (float)ly;
 }
 
-static void player_walk(Player *p)
+void player_walk(Player *p)
 {
     /* 0x415780 */
     AnimObj *a = &g_anim[p->slot];

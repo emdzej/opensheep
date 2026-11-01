@@ -13,10 +13,20 @@ static void unported(const char *what, uint32_t va)
 
 static const struct {
     bool (*actor)(uint32_t va, int32_t *actor);
+    bool (*call)(uint32_t va);
     MoveFn (*move)(uint32_t va);
 } worlds[] = {
-    { lv1_actor, lv1_move }, { lv2_actor, lv2_move },
+    { lv1_actor, NULL, lv1_move }, { lv2_actor, NULL, lv2_move }, { lv3_actor, lv3_call, lv3_move },
 };
+
+void level_hook(uint32_t off)
+{
+    uint32_t va = desc_u32(off);
+    if (!va) return;
+    for (size_t i = 0; i < sizeof worlds / sizeof worlds[0]; i++)
+        if (worlds[i].call && worlds[i].call(va)) return;
+    unported(off == DESC_INIT ? "init" : off == DESC_TICK ? "tick" : off == DESC_RELEASE ? "release" : "draw", va);
+}
 
 void level_actor_hook(int32_t *actor)
 {

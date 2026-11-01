@@ -16,6 +16,7 @@ extern int (*g_demo_abort)(void);
 
 void player_init(Player *p);                                   /* 0x418010 */
 void player_tick(Player *p);                                   /* 0x415f10 */
+void player_walk(Player *p);                                   /* 0x415780: move type 0 */
 void player_set_state(Player *p, int s);                       /* 0x414b10 */
 void player_set_kind(Player *p, int k, int t);                 /* 0x414ba0 */
 void player_collide(int x, int y, Player *p, int act);         /* 0x417ef0 */

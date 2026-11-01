@@ -135,7 +135,8 @@ void level_start(void)
     g_action = 0;
     g_scroll_reset = 1;
     g_cam_target = NULL;
-    /* TODO: the level's init hook (descriptor +0x0c), the demo streams */
+    level_hook(DESC_INIT);             /* 0x406cc0 calls it in mode 1, a level's first start */
+    /* TODO: the demo streams */
 }
 
 /* 0x40cb40: ease toward the target 0.2 px/tick per tick of difference / 16 */
@@ -212,7 +213,7 @@ void play_tick(void)
         if (g_world != 7) sheep_tick();
     }
     camera_update(&g_player);
-    /* TODO: the level's tick hook (descriptor +0x10) */
+    level_hook(DESC_TICK);
     objects_update();
     tile_anims_tick();
 }

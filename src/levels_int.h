@@ -50,8 +50,12 @@ static inline void map_copy(int sx, int sy, int dx, int dy, int w, int h)
         for (int i = 0; i < w; i++) t[i] = s[i];
 }
 
-/* Each world's file: its descriptor hooks and routines by address (false / NULL: not its own). */
+/* Each world's file: its descriptor hooks and routines by address (false / NULL: not its own);
+   _call runs a hook without arguments (init, tick, draw, release). */
 bool lv1_actor(uint32_t va, int32_t *actor);
 MoveFn lv1_move(uint32_t va);
 bool lv2_actor(uint32_t va, int32_t *actor);
 MoveFn lv2_move(uint32_t va);
+bool lv3_actor(uint32_t va, int32_t *actor);
+bool lv3_call(uint32_t va);
+MoveFn lv3_move(uint32_t va);

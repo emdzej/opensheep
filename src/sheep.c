@@ -898,7 +898,7 @@ static void sheep_pickup(Sheep *a)
     }
 }
 
-static void sheep_walk(Sheep *a)
+void sheep_walk(Sheep *a)
 {
     /* 0x41c480 */
     a->d[0x1d] |= 1;
