@@ -1,7 +1,7 @@
 # Controls
 
-The original's defaults. The front end's options choose the controller: mouse, keyboard, analog pad
-or digital pad. M, K and J switch between mouse, keyboard and pad during a level.
+The original's defaults. The game starts with the keyboard. To play with the mouse, press **M** in a
+level, or choose the mouse in the options' controller page, which is kept. In a level, **M**, **K** and **J** switch to the mouse, the keyboard and a pad.
 
 | In the game | Keyboard | Mouse | Pad |
 |---|---|---|---|
@@ -16,7 +16,9 @@ or digital pad. M, K and J switch between mouse, keyboard and pad during a level
 
 Menus use the arrow keys, Enter and Esc, or the mouse.
 
-In the browser, the mouse is captured while you play with it (click the game); Esc releases it.
+In the browser, the mouse controller captures the mouse, so it can't leave the game: the player asks
+for it when you press M, or click the game if the line under it says so. Esc releases it: that is the
+browser's own key for it, which no page can change.
 Holding Esc for a second stops the game.
 
 On Windows, Left Alt with Left Shift switches the keyboard layout when more than one is installed.

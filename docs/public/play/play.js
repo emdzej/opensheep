@@ -51,6 +51,24 @@ addEventListener('keyup', (e) => {
   if (e.code === 'Escape') escDown = 0;
   else if (running && !typing(e) && /^Alt/.test(e.code)) e.preventDefault();
 });
+// The mouse controller asks for the pointer locked (the game reads its motion, as DirectInput's). Browsers
+// lock it only on a user gesture: try at once when the game asks (the M key may still count), then on a
+// click of the game (BrowserInput's pointerdown; a click too, for Safari). The browser releases it on Esc.
+const lockWanted = () => running && !!((worker?.inputMode ?? 0) & 4);
+const locked = () => document.pointerLockElement === $('screen');
+const lock = () => { if (lockWanted() && !locked()) Promise.resolve($('screen').requestPointerLock?.()).catch(() => {}); };
+let lockWas = false, lockFailed = false;
+function followLock() {
+  const want = lockWanted();
+  if (want && !lockWas) lock();
+  lockWas = want;
+}
+$('screen').addEventListener('click', lock);
+document.addEventListener('pointerlockchange', () => { if (locked()) lockFailed = false; });
+document.addEventListener('pointerlockerror', () => { lockFailed = true; });
+const lockHint = () => !lockWanted() || locked() ? ''
+  : lockFailed ? ' · the browser refused to capture the mouse: click the game again'
+  : ' · click the game to capture the mouse (Esc releases it)';
 const readPads = () => gamepadPads(browserGamepads());
 
 // ---- audio: the gasm web player's AudioWorklet queue ------------------------------------------
@@ -254,12 +272,13 @@ function tick(now) {
     worker.frames(steps, true).then((r) => {
       inflight = false;
       keyboard.setMode(worker?.inputMode ?? 0);   // the cursor hidden / locked as the game asked
+      followLock();
       fpsN += due;
       if (r.frame) present(r.frame.rgba, r.frame.width, r.frame.height);
     }, stopped);
   }
   if (acc > period * 4) acc = 0;       // fell far behind: resync
-  if (now - fpsT >= 1000) { $('status').textContent = `${fpsN} frames/s`; fpsN = 0; fpsT = now; }
+  if (now - fpsT >= 1000) { $('status').textContent = `${fpsN} frames/s${lockHint()}`; fpsN = 0; fpsT = now; }
 }
 
 const hex = (h) => (h >>> 0).toString(16).padStart(8, '0');
