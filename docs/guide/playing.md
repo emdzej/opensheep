@@ -20,6 +20,12 @@ storage for `opensheep.wasm` (in the browser, the site's storage):
 - the best times per level,
 - demo recordings and screenshots, when the [developer options](/guide/developer) are on.
 
+The desktop version keeps them as one file each in `<data folder>/gasm/opensheep`
+(`~/Library/Application Support/gasm/opensheep` on macOS). The [browser player](/play/) exports them
+as a zip of the same files and imports such a zip (or the files themselves), so saves move between
+browsers and to or from the desktop version. Importing replaces the saves with the same names and
+keeps the others.
+
 ## Languages
 
 The CD has the game's texts in several languages; `--param "ini=LANGUAGE <n>"` picks one. Languages

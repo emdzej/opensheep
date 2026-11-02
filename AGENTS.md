@@ -47,7 +47,7 @@ for a reason.
 | `tests/` | `play_test.c`, `xp_test.c` (headless, against the real data), `hashes.txt` (`tools/regress.sh`) |
 | `tools/` | `fn.sh <addr>` (a function from `re/all.c`), `dis.py` (disassembler), format decoders (`xp.py`, `spr.py`, `blo.py`, `rnc.py`), `bik.c` and `overview.c` (native), `regress.sh`, `package-gasm.sh` + `gasm-bundle/` (release bundles: launchers per OS) and `smoke-gasm-bundle.sh`, `favicon.py` (the icon, our own drawing), `web-play-test.mjs` (the browser player in headless Chrome against gasm-run's hashes), `fetch-gasm-sdk.sh` / `fetch-gasm-runner.sh`, `ghidra/` scripts |
 | `PLAN.md` | What was built, and what is left |
-| `docs/` | The VitePress site: `guide/`, `gallery.md`, the browser player `public/play/` (`play.js`, `cd.js`; the gasm runtime vendored by `scripts/vendor-web.sh`) |
+| `docs/` | The VitePress site: `guide/`, `gallery.md`, the browser player `public/play/` (`play.js`, `cd.js`, `saves.js` the saves' export and import; the gasm runtime vendored by `scripts/vendor-web.sh`) |
 | `notes/` | Internal reverse-engineering notes, not on the site: `architecture.md` (address map, main loop, states, levels, objects, the port map), `formats.md` (every file the game reads, and its reader in `src/`). Keep them current when a finding changes |
 
 ## Build and test

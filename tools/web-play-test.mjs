@@ -215,6 +215,33 @@ try {
     `${fps}${left ? '' : ', the picture did not change'}; live-level.png, live-after-esc.png`);
   await page.evaluate('document.getElementById("stop").click()');
   await sleep(500);
+  // Saves: import a zip made by the system's zip (deflated, in a folder, with a stray file), then export
+  // them again: the same bytes back, under the same names.
+  {
+    const dir = mkdtempSync(join(tmpdir(), 'opensheep-saves-'));
+    const slot = Buffer.alloc(68, 7); slot[0] = 1; slot.write('Tester', 1);
+    const best = Buffer.alloc(2048); for (let i = 0; i < best.length; i++) best[i] = (i * 7) & 0xff;
+    mkdirSync(join(dir, 'opensheep'));
+    writeFileSync(join(dir, 'opensheep/Game01.sav'), slot);
+    writeFileSync(join(dir, 'opensheep/HiScore.tab'), best);
+    writeFileSync(join(dir, 'opensheep/not a save.txt'), 'x');
+    execFileSync('zip', ['-qr', 'saves.zip', 'opensheep'], { cwd: dir });
+    await page.open(base);
+    await page.setFiles('#saves-input', [join(dir, 'saves.zip')]);
+    await page.until('/Kept in this browser: 1 save slot, the best times/.test(document.getElementById("saves-desc").textContent)', 10000);
+    const back = await page.evaluate(`(async () => {
+      const { saves } = globalThis.opensheepPlay;
+      const { blob } = await saves.exportSaves();
+      const files = await saves.unzip(await blob.arrayBuffer());
+      return JSON.stringify(files.map(([k, v]) => [k, Array.from(v)]));
+    })()`);
+    const got = new Map(JSON.parse(back));
+    const same = (k, b) => got.has(k) && Buffer.from(got.get(k)).equals(b);
+    const msg = await page.evaluate('document.getElementById("message").textContent');
+    report(got.size === 2 && same('Game01.sav', slot) && same('HiScore.tab', best) && /Skipped.*not a save\.txt/.test(msg),
+      'saves: import a zip, export it back', `${[...got.keys()].join(', ')}; ${msg}`);
+    rmSync(dir, { recursive: true, force: true });
+  }
   // Page screenshot (the browser's own rendering of the page, not the desktop).
   await page.open(base);
   const shot = await page.send('Page.captureScreenshot', { format: 'png' });

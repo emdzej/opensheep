@@ -13,6 +13,7 @@ import { BrowserInput, ProcExit, Resampler, browserGamepads, gamepadPads } from 
 import { GasmWorker } from './vendor/gasm/gasm-worker.js';
 import { FILTERS, GlPresenter } from './vendor/gasm/gasm-present.js';
 import * as cd from './cd.js';
+import * as saves from './saves.js';
 
 const $ = (id) => document.getElementById(id);
 const query = new URLSearchParams(location.search);
@@ -217,6 +218,7 @@ function endGameView() {
   keyboard.setMode(0);          // the cursor back
   show('setup', true);
   refreshImported();
+  refreshSaves();
 }
 
 /** Start the game from 'opfs' (the imported CD) or a checked source (read in place). */
@@ -413,11 +415,52 @@ async function refreshImported() {
   return info;
 }
 
+// ---- the saves: export / import (only from this page: it is hidden while a game runs) -------------
+async function refreshSaves() {
+  try {
+    const files = await saves.listSaves();
+    const slots = files.filter(([k]) => /^Game\d+\.sav$/i.test(k)).length;
+    $('saves-desc').textContent = files.length
+      ? `Kept in this browser: ${slots} save slot${slots === 1 ? '' : 's'}${files.some(([k]) => k === 'HiScore.tab') ? ', the best times' : ''} and ${files.length} file${files.length === 1 ? '' : 's'} in all.`
+      : 'Nothing saved in this browser yet.';
+    $('export-saves').disabled = !files.length;
+  } catch (e) {
+    $('saves-desc').textContent = `The browser's storage can't be read: ${e.message}`;
+    $('export-saves').disabled = $('import-saves').disabled = true;
+  }
+}
+$('export-saves').onclick = async () => {
+  try {
+    const { blob, files } = await saves.exportSaves();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `opensheep-saves-${new Date().toISOString().slice(0, 10)}.zip`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    message(`Exported ${files} file${files === 1 ? '' : 's'} as ${a.download}.`);
+  } catch (e) { message(`Could not export the saves: ${e.message}`, 'error'); }
+};
+$('import-saves').onclick = () => { message(''); $('saves-input').click(); };
+$('saves-input').onchange = async () => {
+  const picked = [...$('saves-input').files];
+  $('saves-input').value = '';
+  if (!picked.length) return;
+  if (running) return message('Stop the game before importing saves.', 'warn');
+  try {
+    const r = await saves.importSaves(picked);
+    const skip = r.skipped.length ? ` Skipped (not a save): ${r.skipped.join(', ')}.` : '';
+    if (r.imported.length) message(`Imported ${r.imported.join(', ')}.${skip}`);
+    else message(`Nothing to import.${skip}`, 'warn');
+  } catch (e) { message(`Could not import the saves: ${e.message}`, 'error'); }
+  refreshSaves();
+};
+
 if (!hasOpfs) message('This browser has no private file storage (OPFS), so the CD can\'t be imported. Play without importing works.', 'warn');
 if (typeof Worker === 'undefined' || typeof WebAssembly === 'undefined') message('This browser can\'t run OpenSheep (it needs WebAssembly and Web Workers).', 'error');
+refreshSaves();
 const ready = refreshImported();
 ready.then((info) => {
   globalThis.__opensheepReady = true;
   if (info && query.has('autoplay')) play('opfs');
 });
-globalThis.opensheepPlay = { play, stopGame, refreshImported, cd };
+globalThis.opensheepPlay = { play, stopGame, refreshImported, refreshSaves, cd, saves };
