@@ -281,6 +281,7 @@ static bool level_begin(void)
         sound_tick();
     }
     level_hook(DESC_RELEASE);
+    g_hint_shown = 0;   /* 0x40d030: no hint box over the next level (its texts are reloaded) */
     if (!level_load_resources()) return false;
     level_start();
     if (g_level != 0) g_prog_level = g_prog;
@@ -290,6 +291,7 @@ static bool level_begin(void)
 void flow_level_reload(void)
 {
     level_hook(DESC_RELEASE);
+    g_hint_shown = 0;   /* 0x40d030 */
     if (level_load_resources()) level_start();
 }
 
