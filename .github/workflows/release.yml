@@ -126,6 +126,9 @@ jobs:
       - name: smoke test (no game data)
         run: tools/smoke-gasm-bundle.sh dist/opensheep-gasm-*-linux-${{ matrix.arch }}.tar.gz
 
+  # The Windows bundle is packaged on Linux; here its gasm-run.exe gets the icon (tools/icon/opensheep.ico,
+  # in the bundle) with rcedit, the zip and its .sha256 are made again and replace the artifact, then the
+  # smoke test runs on that.
   gasm-smoke-windows:
     needs: gasm-package
     runs-on: windows-latest
@@ -134,6 +137,31 @@ jobs:
         with:
           name: opensheep-gasm-windows-x86_64
           path: dist
+      - name: icon on gasm-run.exe (rcedit)
+        shell: pwsh
+        run: |
+          $rcedit = Join-Path $env:RUNNER_TEMP 'rcedit-x64.exe'
+          Invoke-WebRequest https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe -OutFile $rcedit
+          $want = '3e7801db1a5edbec91b49a24a094aad776cb4515488ea5a4ca2289c400eade2a'
+          if ((Get-FileHash $rcedit -Algorithm SHA256).Hash.ToLower() -ne $want) { throw 'rcedit: checksum mismatch' }
+          $zip = Get-ChildItem dist/opensheep-gasm-*-windows-x86_64.zip | Select-Object -First 1
+          $stage = Join-Path $env:RUNNER_TEMP 'stage'
+          Expand-Archive $zip.FullName -DestinationPath $stage
+          $d = (Get-ChildItem $stage -Directory | Select-Object -First 1).FullName
+          & $rcedit (Join-Path $d 'gasm-run.exe') --set-icon (Join-Path $d 'opensheep.ico')
+          if ($LASTEXITCODE -ne 0) { throw "rcedit: exit $LASTEXITCODE" }
+          Remove-Item $zip.FullName
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          [System.IO.Compression.ZipFile]::CreateFromDirectory($d, $zip.FullName, 'Optimal', $true)
+          $hash = (Get-FileHash $zip.FullName -Algorithm SHA256).Hash.ToLower()
+          [System.IO.File]::WriteAllText("$($zip.FullName).sha256", "$hash  $($zip.Name)`n")
+          Get-ChildItem dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: opensheep-gasm-windows-x86_64
+          path: dist/*
+          retention-days: 14
+          overwrite: true
       - name: smoke test (no game data)
         shell: pwsh
         env:
@@ -142,7 +170,7 @@ jobs:
           $zip = Get-ChildItem dist/opensheep-gasm-*-windows-x86_64.zip | Select-Object -First 1
           Expand-Archive $zip.FullName -DestinationPath unpacked
           $d = (Get-ChildItem unpacked -Directory | Select-Object -First 1).FullName
-          foreach ($f in 'gasm-run.exe', 'opensheep.wasm', 'OpenSheep.cmd', 'opensheep.ps1', 'README.txt', 'LICENSE.txt', 'LICENSE-gasm.txt') {
+          foreach ($f in 'gasm-run.exe', 'opensheep.wasm', 'opensheep.ico', 'OpenSheep.cmd', 'opensheep.ps1', 'README.txt', 'LICENSE.txt', 'LICENSE-gasm.txt') {
             if (-not (Test-Path (Join-Path $d $f))) { throw "missing $f" }
           }
           # No data: OpenSheep's clean error, exit code 1 (not a crash).

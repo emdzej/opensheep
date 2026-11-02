@@ -168,7 +168,7 @@ linux-*)
   [ "$(basename "$WASM")" = opensheep.wasm ] || mv "$D/$(basename "$WASM")" "$D/opensheep.wasm"
   fill "$SRC/opensheep.sh" "$D/opensheep.sh"
   cp "$SRC/opensheep-gasm.desktop" "$D/"
-  python3 "$ROOT/tools/icon.py" 256 "$D/opensheep.png" "$ROOT/docs/public/favicon.png"
+  cp "$ROOT/tools/icon/opensheep.png" "$D/opensheep.png"
   chmod 755 "$D/gasm-run" "$D/opensheep.sh"; chmod 644 "$D/opensheep.wasm"
   readme "$D/README.txt"
   cp "$ROOT/LICENSE" "$D/LICENSE"; cp "$RUNDIR/LICENSE" "$D/LICENSE-gasm"
@@ -180,6 +180,7 @@ windows-*)
   STAGE=$(mktemp -d); trap 'rm -rf "$STAGE"' EXIT
   D="$STAGE/$NAME"; mkdir "$D"
   cp "$RUNDIR/gasm-run.exe" "$D/"
+  cp "$ROOT/tools/icon/opensheep.ico" "$D/"   # written into gasm-run.exe on Windows (release.yml: rcedit)
   cp "$WASM" "$D/opensheep.wasm"
   fill "$SRC/OpenSheep.cmd" "$D/OpenSheep.cmd"; fill "$SRC/opensheep.ps1" "$D/opensheep.ps1"
   readme "$D/README.txt"

@@ -12,6 +12,7 @@ export default defineConfig({
 
   head: [
     ["link", { rel: "icon", href: "/favicon.png", type: "image/png" }],
+    ["link", { rel: "apple-touch-icon", href: "/apple-touch-icon.png" }],
     ["meta", { name: "theme-color", content: "#185108" }],
     ["meta", { property: "og:title", content: "OpenSheep — Sheep, native again" }],
     ["meta", { property: "og:description", content: "A faithful, from-scratch reimplementation of Sheep, on the gasm runtime: macOS, Linux, Windows and the browser." }],
