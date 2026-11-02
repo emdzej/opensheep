@@ -46,7 +46,11 @@ addEventListener('keydown', (e) => {
   if (e.code === 'Escape') { if (!e.repeat) escDown = performance.now(); return; }
   if (!browserKey(e)) e.preventDefault();
 });
-addEventListener('keyup', (e) => { if (e.code === 'Escape') escDown = 0; });
+// Windows and Linux browsers act on Alt's release (Firefox's menu bar, Chrome's menu takes the focus)
+addEventListener('keyup', (e) => {
+  if (e.code === 'Escape') escDown = 0;
+  else if (running && !typing(e) && /^Alt/.test(e.code)) e.preventDefault();
+});
 const readPads = () => gamepadPads(browserGamepads());
 
 // ---- audio: the gasm web player's AudioWorklet queue ------------------------------------------

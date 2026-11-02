@@ -18,3 +18,7 @@ Menus use the arrow keys, Enter and Esc, or the mouse.
 
 In the browser, the mouse is captured while you play with it (click the game); Esc releases it.
 Holding Esc for a second stops the game.
+
+On Windows, Left Alt with Left Shift switches the keyboard layout when more than one is installed.
+That is the system's shortcut, and neither the game nor the browser can block it: remove the spare
+layout, or change the shortcut in the language settings.
