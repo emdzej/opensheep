@@ -373,8 +373,12 @@ static int place(int v, uint32_t flags, bool dup)
     if (!V(v)) return 0;
     if (flags & F_MUSIC) {
         if (!(flags & F_STREAM) && dup) {
-            /* 0x406930, a stream buffer's duplicate: not used with the lists the CD has */
-            return 0;
+            /* 0x406930: a voice of its own on the loaded samples (DuplicateSoundBuffer), with the
+               once bit too (0x2000), into a music slot: the walkman's FunkyRadio (0x61) */
+            int b = voice_dup(v);
+            if (!b) return 0;
+            V(b)->flags = flags | F_ONCE;
+            return stream_add(b) ? b : 0;
         }
         return stream_add(v) ? v : 0;
     }
