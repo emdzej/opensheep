@@ -59,7 +59,7 @@ export default defineConfig({
 
     footer: {
       message:
-        "OpenSheep is released under the GPL-3.0. Sheep is © 2000 Mind's Eye Productions / Empire Interactive. OpenSheep contains no original code or assets. It runs on <a href=\"https://gasm.emdzej.pl\">gasm</a>.",
+        "OpenSheep is released under the GPL-3.0. Sheep is © 2000 Mind's Eye Productions / Empire Interactive. OpenSheep contains no original code or assets. It runs on <a href=\"https://gasm.emdzej.pl\">gasm</a>. <a href=\"/credits\">Credits</a>",
     },
   },
 });
